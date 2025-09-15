@@ -22,7 +22,7 @@ import { useState } from "react";
 
 interface ScoringFactor {
   name: string;
-  impact: number; // -100 to +100
+  score: number; // 0-100 normalized score
   weight: number; // 0-1 representing importance in category
   explanation: string;
   dataSource: string;
@@ -135,9 +135,17 @@ function CategoryDetailsExplainer({ category }: { category: CategoryScore }) {
                 }
               }
             } else if (!isFairValue) {
-              // Original logic for non-Fair Value categories
-              impactColor = factor.impact > 0 ? 'text-green-600' : factor.impact < 0 ? 'text-red-500' : 'text-muted-foreground';
-              impactBg = factor.impact > 0 ? 'bg-green-50 dark:bg-green-950/30' : factor.impact < 0 ? 'bg-red-50 dark:bg-red-950/30' : 'bg-muted/50';
+              // Normalized score coloring for non-Fair Value categories
+              if (factor.score >= 70) {
+                impactColor = 'text-green-600';
+                impactBg = 'bg-green-50 dark:bg-green-950/30';
+              } else if (factor.score <= 30) {
+                impactColor = 'text-red-500';
+                impactBg = 'bg-red-50 dark:bg-red-950/30';
+              } else {
+                impactColor = 'text-muted-foreground';
+                impactBg = 'bg-muted/50';
+              }
             }
             
             return (
@@ -163,9 +171,9 @@ function CategoryDetailsExplainer({ category }: { category: CategoryScore }) {
                   {!isFairValue && (
                     <div className="text-right">
                       <div className={`font-mono font-semibold ${impactColor}`}>
-                        {factor.impact > 0 ? '+' : ''}{factor.impact}
+                        {factor.score}/100
                       </div>
-                      <div className="text-xs text-muted-foreground">points</div>
+                      <div className="text-xs text-muted-foreground">score</div>
                     </div>
                   )}
                 </div>

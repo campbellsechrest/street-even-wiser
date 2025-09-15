@@ -53,7 +53,7 @@ interface AnalysisResult {
       baseScore: number;
       adjustments: Array<{
         name: string;
-        impact: number;
+        score: number;
         weight: number;
         explanation: string;
         dataSource: string;
@@ -133,7 +133,7 @@ function HomeContent() {
               adjustments: [
                 {
                   name: "Hedonic Model Prediction",
-                  impact: 0,
+                  score: 0,
                   weight: 0,
                   explanation: "AI model predicts $1,250,000 expected price based on property features: 2BR/2BA, 1,200 sqft, doorman building, Greenwich Village location, recent renovation",
                   dataSource: "Hedonic pricing model trained on 50K+ NYC transactions",
@@ -141,7 +141,7 @@ function HomeContent() {
                 },
                 {
                   name: "Price Gap Analysis", 
-                  impact: 0,
+                  score: 0,
                   weight: 0,
                   explanation: "Listing price $1,185,000 vs expected $1,250,000 = -5.2% gap (underpriced). Formula: (expected - listed) / expected",
                   dataSource: "List price vs model prediction",
@@ -149,7 +149,7 @@ function HomeContent() {
                 },
                 {
                   name: "S-Curve Mapping",
-                  impact: 0,
+                  score: 0,
                   weight: 0,
                   explanation: "Price gap mapped to 0-100 scale using logistic transform (midpoint=8%, slope=25). Result: 73 base score",
                   dataSource: "Logistic transform: 50 + logistic(-5.2%, 8%, 25)",
@@ -157,7 +157,7 @@ function HomeContent() {
                 },
                 {
                   name: "Market Context Adjustment",
-                  impact: 0,
+                  score: 0,
                   weight: 0,
                   explanation: "Multiplier 1.12x applied based on: 45 days on market (neutral), no price cuts (+), strong neighborhood demand (+). Final: 73 × 1.12 = 82",
                   dataSource: "Days on market & pricing history analysis",
@@ -185,16 +185,16 @@ function HomeContent() {
               calculation: "Base Score (80) + Transit Access (+8) + Schools (+5) + Noise (-10) + Walkability (+7) + Parking (-5) = 75",
               adjustments: [
                 {
-                  name: "Subway Proximity (4 min walk)",
-                  impact: +8,
+                  name: "Subway Proximity",
+                  score: 88,
                   weight: 0.35,
-                  explanation: "0.2 miles to W 4th St-Washington Square subway station (A,C,E,B,D,F,M lines). Logistic score: 88/100 points for 4-minute walk time.",
+                  explanation: "0.2 miles to W 4th St-Washington Square subway station (A,C,E,B,D,F,M lines). Logistic score based on 4-minute walk time.",
                   dataSource: "OpenStreetMap & MTA",
-                  value: "88 pts"
+                  value: "4 min walk"
                 },
                 {
                   name: "School Quality",
-                  impact: +5,
+                  score: 75,
                   weight: 0.2,
                   explanation: "Excellent public schools nearby including IS 70 (rated 8/10) and multiple private options",
                   dataSource: "GreatSchools.org",
@@ -202,7 +202,7 @@ function HomeContent() {
                 },
                 {
                   name: "Street Noise Level",
-                  impact: -10,
+                  score: 35,
                   weight: 0.25,
                   explanation: "High traffic area with noise from Washington Square Park events and pedestrian activity",
                   dataSource: "NYC Noise Data & Site Analysis",
@@ -210,7 +210,7 @@ function HomeContent() {
                 },
                 {
                   name: "Walkability Score",
-                  impact: +7,
+                  score: 95,
                   weight: 0.15,
                   explanation: "Excellent walkability with 95/100 walk score, numerous cafes, restaurants, and shops",
                   dataSource: "Walk Score",
@@ -218,7 +218,7 @@ function HomeContent() {
                 },
                 {
                   name: "Parking Availability",
-                  impact: -5,
+                  score: 25,
                   weight: 0.05,
                   explanation: "Limited street parking and expensive garage options ($300-450/month)",
                   dataSource: "SpotHero & Local Garages",
@@ -247,7 +247,7 @@ function HomeContent() {
               adjustments: [
                 {
                   name: "Doorman Service",
-                  impact: +12,
+                  score: 85,
                   weight: 0.3,
                   explanation: "24/7 doorman provides security, package handling, and concierge services",
                   dataSource: "StreetEasy listing & Building Management",
@@ -255,7 +255,7 @@ function HomeContent() {
                 },
                 {
                   name: "Fitness Facilities",
-                  impact: +8,
+                  score: 78,
                   weight: 0.25,
                   explanation: "Well-equipped gym with cardio equipment, weights, and yoga studio",
                   dataSource: "Building amenity list",
@@ -263,7 +263,7 @@ function HomeContent() {
                 },
                 {
                   name: "Building Age & Condition",
-                  impact: -7,
+                  score: 35,
                   weight: 0.2,
                   explanation: "Pre-war building from 1925, shows age despite renovations, original plumbing/electrical",
                   dataSource: "NYC Building Records",
@@ -271,7 +271,7 @@ function HomeContent() {
                 },
                 {
                   name: "Maintenance Fees",
-                  impact: -5,
+                  score: 32,
                   weight: 0.15,
                   explanation: "Monthly maintenance of $1,200 is 15% above neighborhood average for similar properties",
                   dataSource: "StreetEasy market data",
@@ -279,7 +279,7 @@ function HomeContent() {
                 },
                 {
                   name: "Common Areas",
-                  impact: +2,
+                  score: 68,
                   weight: 0.1,
                   explanation: "Recently renovated lobby and hallways, rooftop deck with city views",
                   dataSource: "Building photos & management",
@@ -308,7 +308,7 @@ function HomeContent() {
               adjustments: [
                 {
                   name: "Renovation Quality",
-                  impact: +15,
+                  score: 92,
                   weight: 0.4,
                   explanation: "Complete gut renovation in 2023 with high-end finishes, new kitchen, hardwood floors",
                   dataSource: "StreetEasy photos & listing details",
@@ -316,7 +316,7 @@ function HomeContent() {
                 },
                 {
                   name: "Natural Light",
-                  impact: +8,
+                  score: 80,
                   weight: 0.25,
                   explanation: "South-facing windows provide excellent natural light throughout the day",
                   dataSource: "Listing photos & floor plan",
@@ -324,7 +324,7 @@ function HomeContent() {
                 },
                 {
                   name: "Kitchen Quality",
-                  impact: +7,
+                  score: 78,
                   weight: 0.15,
                   explanation: "Modern kitchen with stainless appliances, quartz counters, and efficient workflow",
                   dataSource: "Listing photos",
@@ -332,7 +332,7 @@ function HomeContent() {
                 },
                 {
                   name: "Layout Efficiency",
-                  impact: -5,
+                  score: 45,
                   weight: 0.15,
                   explanation: "Some wasted space in entry hallway, bedroom could be better proportioned",
                   dataSource: "Floor plan analysis",
@@ -340,7 +340,7 @@ function HomeContent() {
                 },
                 {
                   name: "Storage Space",
-                  impact: -3,
+                  score: 35,
                   weight: 0.05,
                   explanation: "Limited closet space typical of pre-war building, minimal built-in storage",
                   dataSource: "Floor plan analysis",
@@ -369,7 +369,7 @@ function HomeContent() {
               adjustments: [
                 {
                   name: "421a Tax Abatement",
-                  impact: +25,
+                  score: 95,
                   weight: 0.6,
                   explanation: "Property benefits from 421a tax abatement, saving approximately $8,000/year until 2028",
                   dataSource: "NYC Tax Records & ACRIS",
@@ -377,7 +377,7 @@ function HomeContent() {
                 },
                 {
                   name: "Pet Policy",
-                  impact: +5,
+                  score: 70,
                   weight: 0.1,
                   explanation: "Building allows pets with board approval, adds flexibility for future residents",
                   dataSource: "Building bylaws",
@@ -385,7 +385,7 @@ function HomeContent() {
                 },
                 {
                   name: "Flip Tax",
-                  impact: -8,
+                  score: 25,
                   weight: 0.25,
                   explanation: "2% flip tax on gross sale price must be paid by seller, reduces net proceeds",
                   dataSource: "Co-op offering plan",
@@ -393,7 +393,7 @@ function HomeContent() {
                 },
                 {
                   name: "Board Package",
-                  impact: +2,
+                  score: 60,
                   weight: 0.05,
                   explanation: "Standard co-op board approval process, not excessively strict compared to competitors",
                   dataSource: "Broker feedback",
