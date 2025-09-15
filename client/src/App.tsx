@@ -97,7 +97,7 @@ function HomeContent() {
         property: {
           address: "123 West 4th Street",
           unit: "5B",
-          price: 1250000,
+          price: 1185000,
           bedrooms: 2,
           bathrooms: 2,
           squareFeet: 1200,
