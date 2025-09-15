@@ -110,6 +110,49 @@ function HomeContent() {
               positive: ["Below market pricing", "Strong comparable sales"],
               negative: ["High days on market"],
             },
+            methodology: {
+              baseScore: 75,
+              calculation: "Base Score (75) + Price Gap Adjustment (+12) + Market Conditions (-5) = 82",
+              adjustments: [
+                {
+                  name: "Price Gap Analysis",
+                  impact: +12,
+                  weight: 0.5,
+                  explanation: "Property asking price is 5.6% below expected market value based on comparable sales analysis",
+                  dataSource: "StreetEasy comparable sales",
+                  value: "-5.6%"
+                },
+                {
+                  name: "Comparable Sales Quality",
+                  impact: +8,
+                  weight: 0.3,
+                  explanation: "High-quality comparable data with 3 similar sales within 0.2 miles in the last 90 days",
+                  dataSource: "MLS & StreetEasy",
+                  value: "3 comps"
+                },
+                {
+                  name: "Days on Market",
+                  impact: -5,
+                  weight: 0.15,
+                  explanation: "Property has been on market for 45 days, above neighborhood average of 28 days",
+                  dataSource: "StreetEasy market data",
+                  value: "45 days"
+                },
+                {
+                  name: "Market Trend",
+                  impact: +2,
+                  weight: 0.05,
+                  explanation: "Greenwich Village prices up 3.2% year-over-year, indicating favorable market conditions",
+                  dataSource: "StreetEasy Market Reports",
+                  value: "+3.2% YoY"
+                }
+              ],
+              dataQuality: {
+                completeness: 92,
+                confidence: 88,
+                sources: ["StreetEasy", "MLS", "Public Records", "Market Reports"]
+              }
+            }
           },
           {
             name: "Location & Neighborhood", 
