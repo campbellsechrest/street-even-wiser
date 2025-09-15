@@ -27,6 +27,8 @@ interface ScoringFactor {
   explanation: string;
   dataSource: string;
   value?: string | number;
+  verdict?: "underpriced" | "overpriced" | "fair";
+  multiplier?: number;
 }
 
 interface CategoryScore {
@@ -104,8 +106,39 @@ function CategoryDetailsExplainer({ category }: { category: CategoryScore }) {
         </div>
         <div className="space-y-3">
           {adjustments.map((factor, index) => {
-            const impactColor = factor.impact > 0 ? 'text-green-600' : factor.impact < 0 ? 'text-red-500' : 'text-muted-foreground';
-            const impactBg = factor.impact > 0 ? 'bg-green-50 dark:bg-green-950/30' : factor.impact < 0 ? 'bg-red-50 dark:bg-red-950/30' : 'bg-muted/50';
+            // Special handling for Fair Value category
+            const isFairValue = category.name === "Fair Value & Market Context";
+            
+            // Conditional coloring for price gap analysis
+            let impactColor = 'text-muted-foreground';
+            let impactBg = 'bg-muted/50';
+            
+            if (factor.name === "Price Gap Analysis" && factor.value && typeof factor.value === 'string') {
+              if (factor.value.includes('underpriced')) {
+                impactColor = 'text-green-600';
+                impactBg = 'bg-green-50 dark:bg-green-950/30';
+              } else if (factor.value.includes('overpriced')) {
+                impactColor = 'text-red-500';
+                impactBg = 'bg-red-50 dark:bg-red-950/30';
+              }
+            } else if (factor.name === "Market Context Adjustment" && factor.value && typeof factor.value === 'string') {
+              // Parse multiplier from value string like "1.12x multiplier"
+              const multiplierMatch = factor.value.match(/(\d+\.?\d*)x/);
+              if (multiplierMatch) {
+                const multiplier = parseFloat(multiplierMatch[1]);
+                if (multiplier > 1.0) {
+                  impactColor = 'text-green-600';
+                  impactBg = 'bg-green-50 dark:bg-green-950/30';
+                } else if (multiplier < 1.0) {
+                  impactColor = 'text-red-500';
+                  impactBg = 'bg-red-50 dark:bg-red-950/30';
+                }
+              }
+            } else if (!isFairValue) {
+              // Original logic for non-Fair Value categories
+              impactColor = factor.impact > 0 ? 'text-green-600' : factor.impact < 0 ? 'text-red-500' : 'text-muted-foreground';
+              impactBg = factor.impact > 0 ? 'bg-green-50 dark:bg-green-950/30' : factor.impact < 0 ? 'bg-red-50 dark:bg-red-950/30' : 'bg-muted/50';
+            }
             
             return (
               <div key={index} className={`p-3 rounded border ${impactBg}`}>
@@ -122,15 +155,19 @@ function CategoryDetailsExplainer({ category }: { category: CategoryScore }) {
                     <p className="text-xs text-muted-foreground">{factor.explanation}</p>
                     <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                       <span>Source: {factor.dataSource}</span>
-                      <span>Weight: {Math.round(factor.weight * 100)}%</span>
+                      {!isFairValue && (
+                        <span>Weight: {Math.round(factor.weight * 100)}%</span>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className={`font-mono font-semibold ${impactColor}`}>
-                      {factor.impact > 0 ? '+' : ''}{factor.impact}
+                  {!isFairValue && (
+                    <div className="text-right">
+                      <div className={`font-mono font-semibold ${impactColor}`}>
+                        {factor.impact > 0 ? '+' : ''}{factor.impact}
+                      </div>
+                      <div className="text-xs text-muted-foreground">points</div>
                     </div>
-                    <div className="text-xs text-muted-foreground">points</div>
-                  </div>
+                  )}
                 </div>
               </div>
             );

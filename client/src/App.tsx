@@ -134,7 +134,7 @@ function HomeContent() {
                 {
                   name: "Hedonic Model Prediction",
                   impact: 0,
-                  weight: 1.0,
+                  weight: 0,
                   explanation: "AI model predicts $1,250,000 expected price based on property features: 2BR/2BA, 1,200 sqft, doorman building, Greenwich Village location, recent renovation",
                   dataSource: "Hedonic pricing model trained on 50K+ NYC transactions",
                   value: "$1,250,000"
@@ -142,15 +142,15 @@ function HomeContent() {
                 {
                   name: "Price Gap Analysis", 
                   impact: 0,
-                  weight: 0.85,
+                  weight: 0,
                   explanation: "Listing price $1,185,000 vs expected $1,250,000 = -5.2% gap (underpriced). Formula: (expected - listed) / expected",
                   dataSource: "List price vs model prediction",
-                  value: "-5.2% gap"
+                  value: "-5.2% gap (underpriced)"
                 },
                 {
                   name: "S-Curve Mapping",
                   impact: 0,
-                  weight: 0.1,
+                  weight: 0,
                   explanation: "Price gap mapped to 0-100 scale using logistic transform (midpoint=8%, slope=25). Result: 73 base score",
                   dataSource: "Logistic transform: 50 + logistic(-5.2%, 8%, 25)",
                   value: "73 base score"
@@ -158,7 +158,7 @@ function HomeContent() {
                 {
                   name: "Market Context Adjustment",
                   impact: 0,
-                  weight: 0.05,
+                  weight: 0,
                   explanation: "Multiplier 1.12x applied based on: 45 days on market (neutral), no price cuts (+), strong neighborhood demand (+). Final: 73 × 1.12 = 82",
                   dataSource: "Days on market & pricing history analysis",
                   value: "1.12x multiplier"
@@ -720,7 +720,7 @@ function HomeContent() {
             />
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-8" data-testid="analysis-complete">
             {/* Header Actions */}
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-foreground">Property Analysis</h1>
