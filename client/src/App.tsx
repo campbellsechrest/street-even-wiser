@@ -112,9 +112,9 @@ function HomeContent() {
           confidence: 85,
           interpretation: "Good Value",
           priceAnalysis: {
-            askingPrice: 1250000,
-            expectedPrice: 1180000,
-            priceGap: -5.6,
+            askingPrice: 1185000,
+            expectedPrice: 1250000,
+            priceGap: -5.2,
           },
         },
         categories: [
@@ -128,46 +128,46 @@ function HomeContent() {
               negative: ["High days on market"],
             },
             methodology: {
-              baseScore: 75,
-              calculation: "Base Score (75) + Price Gap Adjustment (+12) + Market Conditions (-5) = 82",
+              baseScore: 73,
+              calculation: "Hedonic Model: $1,250,000 expected → $1,185,000 listed = -5.2% gap → S-curve: 73 → Market adjustment: 1.12x → Final: 82",
               adjustments: [
                 {
-                  name: "Price Gap Analysis",
-                  impact: +12,
-                  weight: 0.5,
-                  explanation: "Property asking price is 5.6% below expected market value based on comparable sales analysis",
-                  dataSource: "StreetEasy comparable sales",
-                  value: "-5.6%"
+                  name: "Hedonic Model Prediction",
+                  impact: 0,
+                  weight: 1.0,
+                  explanation: "AI model predicts $1,250,000 expected price based on property features: 2BR/2BA, 1,200 sqft, doorman building, Greenwich Village location, recent renovation",
+                  dataSource: "Hedonic pricing model trained on 50K+ NYC transactions",
+                  value: "$1,250,000"
                 },
                 {
-                  name: "Comparable Sales Quality",
-                  impact: +8,
-                  weight: 0.3,
-                  explanation: "High-quality comparable data with 3 similar sales within 0.2 miles in the last 90 days",
-                  dataSource: "MLS & StreetEasy",
-                  value: "3 comps"
+                  name: "Price Gap Analysis", 
+                  impact: 0,
+                  weight: 0.85,
+                  explanation: "Listing price $1,185,000 vs expected $1,250,000 = -5.2% gap (underpriced). Formula: (expected - listed) / expected",
+                  dataSource: "List price vs model prediction",
+                  value: "-5.2% gap"
                 },
                 {
-                  name: "Days on Market",
-                  impact: -5,
-                  weight: 0.15,
-                  explanation: "Property has been on market for 45 days, above neighborhood average of 28 days",
-                  dataSource: "StreetEasy market data",
-                  value: "45 days"
+                  name: "S-Curve Mapping",
+                  impact: 0,
+                  weight: 0.1,
+                  explanation: "Price gap mapped to 0-100 scale using logistic transform (midpoint=8%, slope=25). Result: 73 base score",
+                  dataSource: "Logistic transform: 50 + logistic(-5.2%, 8%, 25)",
+                  value: "73 base score"
                 },
                 {
-                  name: "Market Trend",
-                  impact: +2,
+                  name: "Market Context Adjustment",
+                  impact: 0,
                   weight: 0.05,
-                  explanation: "Greenwich Village prices up 3.2% year-over-year, indicating favorable market conditions",
-                  dataSource: "StreetEasy Market Reports",
-                  value: "+3.2% YoY"
+                  explanation: "Multiplier 1.12x applied based on: 45 days on market (neutral), no price cuts (+), strong neighborhood demand (+). Final: 73 × 1.12 = 82",
+                  dataSource: "Days on market & pricing history analysis",
+                  value: "1.12x multiplier"
                 }
               ],
               dataQuality: {
                 completeness: 92,
                 confidence: 88,
-                sources: ["StreetEasy", "MLS", "Public Records", "Market Reports"]
+                sources: ["Hedonic Model", "StreetEasy", "MLS", "Public Records", "Market Reports"]
               }
             }
           },
