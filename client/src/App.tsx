@@ -185,12 +185,12 @@ function HomeContent() {
               calculation: "Base Score (80) + Transit Access (+8) + Schools (+5) + Noise (-10) + Walkability (+7) + Parking (-5) = 75",
               adjustments: [
                 {
-                  name: "Subway Proximity",
+                  name: "Subway Proximity (4 min walk)",
                   impact: +8,
                   weight: 0.35,
-                  explanation: "0.2 miles to W 4th St-Washington Square subway station (A,C,E,B,D,F,M lines)",
-                  dataSource: "MTA & Google Maps",
-                  value: "0.2 mi"
+                  explanation: "0.2 miles to W 4th St-Washington Square subway station (A,C,E,B,D,F,M lines). Logistic score: 88/100 points for 4-minute walk time.",
+                  dataSource: "OpenStreetMap & MTA",
+                  value: "88 pts"
                 },
                 {
                   name: "School Quality",
@@ -228,7 +228,7 @@ function HomeContent() {
               dataQuality: {
                 completeness: 88,
                 confidence: 85,
-                sources: ["MTA", "GreatSchools.org", "Walk Score", "NYC Open Data", "Site Visit"]
+                sources: ["OpenStreetMap", "Nominatim", "MTA", "GreatSchools.org", "Walk Score", "NYC Open Data", "Site Visit"]
               }
             }
           },
