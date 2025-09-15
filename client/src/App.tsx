@@ -70,16 +70,248 @@ function HomeContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  const handlePropertySubmit = (data: any) => {
-    console.log("Analyzing property:", data);
+  const handleUrlSubmit = (data: { url: string }) => {
+    console.log("Analyzing URL:", data);
     setIsAnalyzing(true);
     
-    // Todo: remove mock functionality - simulate analysis
+    // Todo: remove mock functionality - simulate URL extraction and analysis
     setTimeout(() => {
       const mockResult: AnalysisResult = {
         property: {
-          address: data.address || "123 West 4th Street",
-          unit: data.unit || "5B",
+          address: "123 West 4th Street",
+          unit: "5B",
+          price: 1250000,
+          bedrooms: 2,
+          bathrooms: 2,
+          squareFeet: 1200,
+          propertyType: "condo",
+          maintenance: 1200,
+          taxes: 950,
+          neighborhood: "Greenwich Village",
+          daysOnMarket: 45,
+        },
+        streetwiseScore: {
+          score: 78,
+          confidence: 85,
+          interpretation: "Good Value",
+          priceAnalysis: {
+            askingPrice: 1250000,
+            expectedPrice: 1180000,
+            priceGap: -5.6,
+          },
+        },
+        categories: [
+          {
+            name: "Fair Value & Market Context",
+            score: 82,
+            weight: 40,
+            description: "Asking price vs. comp-adjusted expected price",
+            topFactors: {
+              positive: ["Below market pricing", "Strong comparable sales"],
+              negative: ["High days on market"],
+            },
+          },
+          {
+            name: "Location & Neighborhood", 
+            score: 75,
+            weight: 20,
+            description: "Transit access, schools, noise, amenities",
+            topFactors: {
+              positive: ["Close to subway", "Top-rated schools"],
+              negative: ["Street noise", "Limited parking"],
+            },
+          },
+          {
+            name: "Building & Amenities",
+            score: 68,
+            weight: 15,
+            description: "Building quality, amenities, services",
+            topFactors: {
+              positive: ["Doorman", "Gym facility"],
+              negative: ["High maintenance fees", "Older building"],
+            },
+          },
+          {
+            name: "Unit & Layout",
+            score: 85,
+            weight: 20,
+            description: "Renovation, features, layout efficiency",
+            topFactors: {
+              positive: ["Recent renovation", "Great natural light"],
+              negative: ["Small bathroom"],
+            },
+          },
+          {
+            name: "Bonuses/Penalties",
+            score: 72,
+            weight: 5,
+            description: "Special conditions and deal-breakers",
+            topFactors: {
+              positive: ["Tax abatement", "Pets allowed"],
+              negative: ["Flip tax"],
+            },
+          },
+        ],
+        comparables: [
+          {
+            id: "1",
+            address: "125 West 4th Street",
+            unit: "3A",
+            price: 1180000,
+            bedrooms: 2,
+            bathrooms: 2,
+            squareFeet: 1150,
+            soldDate: "Dec 2024",
+            distance: 0.02,
+            similarity: 92,
+            priceAdjustment: -5.6,
+          },
+          {
+            id: "2",
+            address: "110 West 3rd Street",
+            price: 1320000,
+            bedrooms: 2,
+            bathrooms: 2,
+            squareFeet: 1280,
+            soldDate: "Nov 2024",
+            distance: 0.1,
+            similarity: 85,
+            priceAdjustment: 5.6,
+          },
+          {
+            id: "3",
+            address: "89 MacDougal Street",
+            unit: "2B",
+            price: 1100000,
+            bedrooms: 2,
+            bathrooms: 1.5,
+            squareFeet: 1100,
+            soldDate: "Oct 2024",
+            distance: 0.2,
+            similarity: 78,
+            priceAdjustment: -12.0,
+          },
+        ],
+      };
+      
+      setAnalysisResult(mockResult);
+      setIsAnalyzing(false);
+    }, 3000);
+  };
+
+  const handleAddressSubmit = (data: { address: string }) => {
+    console.log("Analyzing address:", data);
+    setIsAnalyzing(true);
+    
+    // Todo: remove mock functionality - simulate address search and analysis
+    setTimeout(() => {
+      const mockResult: AnalysisResult = {
+        property: {
+          address: data.address,
+          unit: undefined,
+          price: 1150000,
+          bedrooms: 2,
+          bathrooms: 1,
+          squareFeet: 1100,
+          propertyType: "condo",
+          maintenance: 950,
+          taxes: 800,
+          neighborhood: "Greenwich Village",
+          daysOnMarket: 30,
+        },
+        streetwiseScore: {
+          score: 65,
+          confidence: 75, // Lower confidence for address-based analysis
+          interpretation: "Average Value",
+          priceAnalysis: {
+            askingPrice: 1150000,
+            expectedPrice: 1080000,
+            priceGap: -6.1,
+          },
+        },
+        categories: [
+          {
+            name: "Fair Value & Market Context",
+            score: 68,
+            weight: 40,
+            description: "Asking price vs. comp-adjusted expected price",
+            topFactors: {
+              positive: ["Reasonable pricing"],
+              negative: ["Limited data", "Address-only analysis"],
+            },
+          },
+          {
+            name: "Location & Neighborhood", 
+            score: 75,
+            weight: 20,
+            description: "Transit access, schools, noise, amenities",
+            topFactors: {
+              positive: ["Good neighborhood", "Transit access"],
+              negative: ["Unknown specific location factors"],
+            },
+          },
+          {
+            name: "Building & Amenities",
+            score: 50,
+            weight: 15,
+            description: "Building quality, amenities, services",
+            topFactors: {
+              positive: [],
+              negative: ["No building data available"],
+            },
+          },
+          {
+            name: "Unit & Layout",
+            score: 50,
+            weight: 20,
+            description: "Renovation, features, layout efficiency",
+            topFactors: {
+              positive: [],
+              negative: ["No unit details available"],
+            },
+          },
+          {
+            name: "Bonuses/Penalties",
+            score: 50,
+            weight: 5,
+            description: "Special conditions and deal-breakers",
+            topFactors: {
+              positive: [],
+              negative: ["Limited analysis scope"],
+            },
+          },
+        ],
+        comparables: [
+          {
+            id: "1",
+            address: "Similar property nearby",
+            price: 1100000,
+            bedrooms: 2,
+            bathrooms: 1,
+            squareFeet: 1050,
+            soldDate: "Dec 2024",
+            distance: 0.1,
+            similarity: 70,
+            priceAdjustment: -4.3,
+          },
+        ],
+      };
+      
+      setAnalysisResult(mockResult);
+      setIsAnalyzing(false);
+    }, 2500);
+  };
+
+  const handleManualSubmit = (data: any) => {
+    console.log("Analyzing manual data:", data);
+    setIsAnalyzing(true);
+    
+    // Todo: remove mock functionality - simulate manual data analysis
+    setTimeout(() => {
+      const mockResult: AnalysisResult = {
+        property: {
+          address: data.address || "Manual Entry Property",
+          unit: data.unit,
           price: data.price || 1250000,
           bedrooms: data.bedrooms || 2,
           bathrooms: data.bathrooms || 2,
@@ -225,8 +457,9 @@ function HomeContent() {
             </div>
             
             <PropertyInputForm
-              onSubmit={handlePropertySubmit}
-              onExtractFromUrl={(url) => console.log("Extract from URL:", url)}
+              onSubmitUrl={handleUrlSubmit}
+              onSubmitAddress={handleAddressSubmit}
+              onSubmitManual={handleManualSubmit}
               isLoading={isAnalyzing}
             />
           </div>

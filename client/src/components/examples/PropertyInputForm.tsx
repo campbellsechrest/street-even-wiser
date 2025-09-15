@@ -6,20 +6,12 @@ export default function PropertyInputFormExample() {
   const [extractionProgress, setExtractionProgress] = useState<{
     step: string;
     confidence: number;
+    extractedData?: any;
+    needsManualInput?: boolean;
   } | undefined>();
 
-  const handleSubmit = (data: any) => {
-    console.log("Property data submitted:", data);
-    setIsLoading(true);
-    
-    // Todo: remove mock functionality
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-  };
-
-  const handleExtractFromUrl = (url: string) => {
-    console.log("Extracting from URL:", url);
+  const handleUrlSubmit = (data: { url: string }) => {
+    console.log("URL submitted:", data);
     setIsLoading(true);
     
     // Todo: remove mock functionality - simulate extraction process
@@ -33,17 +25,45 @@ export default function PropertyInputFormExample() {
     setTimeout(() => {
       setExtractionProgress({
         step: "Extraction complete",
-        confidence: 92,
+        confidence: 65, // Low confidence to trigger manual input
+        extractedData: {
+          address: "123 West 4th Street",
+          price: 1250000,
+          bedrooms: 2,
+          bathrooms: 2,
+        },
+        needsManualInput: true,
       });
       setIsLoading(false);
     }, 3000);
   };
 
+  const handleAddressSubmit = (data: { address: string }) => {
+    console.log("Address submitted:", data);
+    setIsLoading(true);
+    
+    // Todo: remove mock functionality
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+  };
+
+  const handleManualSubmit = (data: any) => {
+    console.log("Manual data submitted:", data);
+    setIsLoading(true);
+    
+    // Todo: remove mock functionality
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+  };
+
   return (
     <div className="p-6">
       <PropertyInputForm
-        onSubmit={handleSubmit}
-        onExtractFromUrl={handleExtractFromUrl}
+        onSubmitUrl={handleUrlSubmit}
+        onSubmitAddress={handleAddressSubmit}
+        onSubmitManual={handleManualSubmit}
         isLoading={isLoading}
         extractionProgress={extractionProgress}
       />
