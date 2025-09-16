@@ -326,7 +326,7 @@ export default function PropertyInputForm({
                 </div>
 
                 <div>
-                  <Label htmlFor="manual-bedrooms">Bedrooms</Label>
+                  <Label htmlFor="manual-bedrooms">Bedrooms *</Label>
                   <Input
                     data-testid="input-manual-bedrooms"
                     id="manual-bedrooms"
@@ -338,7 +338,7 @@ export default function PropertyInputForm({
                 </div>
 
                 <div>
-                  <Label htmlFor="manual-bathrooms">Bathrooms</Label>
+                  <Label htmlFor="manual-bathrooms">Bathrooms *</Label>
                   <Input
                     data-testid="input-manual-bathrooms"
                     id="manual-bathrooms"
@@ -362,7 +362,7 @@ export default function PropertyInputForm({
                 </div>
 
                 <div>
-                  <Label htmlFor="manual-propertyType">Property Type</Label>
+                  <Label htmlFor="manual-propertyType">Property Type *</Label>
                   <Select
                     onValueChange={(value: "condo" | "coop" | "townhouse") => 
                       manualForm.setValue("propertyType", value)
