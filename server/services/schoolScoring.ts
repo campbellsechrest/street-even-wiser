@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { schoolScoreAudits, boroughSchoolMedians, InsertSchoolScoreAudit, InsertBoroughSchoolMedian } from "../../shared/schema";
+import { schoolScoreAudits, boroughSchoolMedians, InsertSchoolScoreAudit, InsertBoroughSchoolMedian, SchoolScoreAudit } from "../../shared/schema";
+import { generateId, safeInsert } from "../utils/database";
 
 interface SchoolZoneResult {
   dbn: string;
@@ -63,7 +64,7 @@ export class SchoolScoringService {
       const rawScore = 100 * (1 / (1 + Math.exp(-k * (compositeRating - boroughMedian))));
       const finalScore = Math.round(Math.max(0, Math.min(100, rawScore)));
       
-      // 6. Store audit trail
+      // 6. Store audit trail with database-agnostic approach
       const auditData: InsertSchoolScoreAudit = {
         schoolDbn: schoolZone.dbn,
         schoolName: schoolZone.school_name,
@@ -77,7 +78,12 @@ export class SchoolScoringService {
         dataSource: "doe_quality_reports"
       };
       
-      const [audit] = await db.insert(schoolScoreAudits).values(auditData).returning();
+      // Use safe insert that properly handles databases with/without .returning() support
+      const audit = await safeInsert<SchoolScoreAudit>(
+        db.insert(schoolScoreAudits),
+        auditData,
+        { ensureId: true } // Ensure ID is generated for non-returning databases
+      );
       
       // 7. Generate explanation
       const explanation = this.generateExplanation(qualityData, compositeRating, boroughMedian, borough);
@@ -241,6 +247,8 @@ export class SchoolScoringService {
     // Map various field names from different NYC Open Data endpoints to consistent format
     const dbnFieldNames = ['dbn', 'school_code', 'ats_system_code', 'school_dbn'];
     const nameFieldNames = ['school_name', 'schoolname', 'school_nm', 'name', 'sch_name'];
+    const gradeFieldNames = ['grades', 'grade_levels', 'served_grades', 'grades_served'];
+    const addressFieldNames = ['address', 'location', 'school_address', 'primary_address'];
     
     console.log(`Normalizing zone data with keys: ${Object.keys(rawZone).join(', ')}`);
     
@@ -264,6 +272,26 @@ export class SchoolScoringService {
       }
     }
     
+    // Find grades using possible field names
+    let grades = '';
+    for (const fieldName of gradeFieldNames) {
+      if (rawZone[fieldName]) {
+        grades = rawZone[fieldName].toString().trim();
+        console.log(`Found grades '${grades}' in field '${fieldName}'`);
+        break;
+      }
+    }
+    
+    // Find address using possible field names
+    let address = '';
+    for (const fieldName of addressFieldNames) {
+      if (rawZone[fieldName]) {
+        address = rawZone[fieldName].toString().trim();
+        console.log(`Found address '${address}' in field '${fieldName}'`);
+        break;
+      }
+    }
+    
     // If no DBN found, return null
     if (!dbn) {
       console.warn(`No DBN found in zone data. Available fields: ${Object.keys(rawZone).join(', ')}`);
@@ -276,9 +304,22 @@ export class SchoolScoringService {
       console.log(`Generated school name '${school_name}' from DBN '${dbn}'`);
     }
     
+    // Default values for missing optional fields
+    if (!grades) {
+      grades = 'K-5'; // Default elementary grades
+      console.log(`Using default grades '${grades}' for DBN '${dbn}'`);
+    }
+    
+    if (!address) {
+      address = 'NYC School Zone'; // Default address
+      console.log(`Using default address '${address}' for DBN '${dbn}'`);
+    }
+    
     return {
       dbn,
-      school_name
+      school_name,
+      grades,
+      address
     };
   }
 
