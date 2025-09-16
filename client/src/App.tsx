@@ -126,10 +126,25 @@ function HomeContent() {
   // Property extraction mutation
   const extractPropertyMutation = useMutation({
     mutationFn: async (streetEasyUrl: string): Promise<PropertyExtractionResponse> => {
-      const response = await apiRequest("POST", "/api/properties/extract", {
-        streetEasyUrl
-      });
-      return await response.json();
+      try {
+        const response = await apiRequest("POST", "/api/properties/extract", {
+          streetEasyUrl
+        });
+        return await response.json();
+      } catch (error: any) {
+        // Handle 422 responses (bot detection) as valid responses
+        // apiRequest throws Error with message like "422: {json response}"
+        if (error.message && error.message.startsWith("422:")) {
+          const jsonPart = error.message.substring(4); // Remove "422:" prefix
+          try {
+            const errorData = JSON.parse(jsonPart.trim());
+            return errorData as PropertyExtractionResponse;
+          } catch (parseError) {
+            console.error("Failed to parse 422 response:", parseError);
+          }
+        }
+        throw error;
+      }
     },
     onError: (error: Error) => {
       console.error("Property extraction failed:", error);
@@ -152,14 +167,17 @@ function HomeContent() {
 
       if (!extractionResult.success) {
         // Handle extraction failures
-        const errorMessage = extractionResult.botDetected 
-          ? `Bot detection encountered. ${extractionResult.message || ""} Please try again or consider entering property details manually.`
+        const isBotDetection = extractionResult.botDetected || 
+                              (extractionResult.error && extractionResult.error.includes("403 Forbidden"));
+        
+        const errorMessage = isBotDetection
+          ? "StreetEasy has temporarily blocked our request. This happens occasionally (~12% of the time). Please try again in a moment, or use the manual entry option below."
           : extractionResult.error || "Failed to extract property data";
           
         toast({
-          title: extractionResult.botDetected ? "Bot Detection" : "Extraction Failed",
+          title: isBotDetection ? "Temporarily Blocked" : "Extraction Failed",
           description: errorMessage,
-          variant: extractionResult.botDetected ? "default" : "destructive",
+          variant: isBotDetection ? "default" : "destructive",
         });
         
         setIsAnalyzing(false);
