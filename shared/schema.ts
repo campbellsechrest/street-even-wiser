@@ -59,6 +59,33 @@ export const properties = pgTable("properties", {
   extractionMethod: text("extraction_method").default("http"), // 'http', 'firecrawl', 'alternative'
 });
 
+// Neighborhood enrichment audit tables
+export const neighborhoodEnrichmentAudits = pgTable("neighborhood_enrichment_audits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lat: real("lat").notNull(),
+  lng: real("lng").notNull(),
+  address: text("address"),
+  subwayScore: integer("subway_score"), // 0-100 score based on proximity to subway
+  walkabilityScore: integer("walkability_score"), // 0-100 walkability rating
+  noiseScore: integer("noise_score"), // 0-100 score (higher = quieter)
+  parkingScore: integer("parking_score"), // 0-100 score (higher = better parking)
+  nearestSubwayStation: text("nearest_subway_station"),
+  nearestSubwayDistance: real("nearest_subway_distance"), // Distance in miles
+  dataSource: text("data_source").notNull(), // Source of enrichment data
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Subway stations cache for proximity calculations
+export const subwayStations = pgTable("subway_stations", {
+  id: varchar("id").primaryKey(),
+  name: text("name").notNull(),
+  lat: real("lat").notNull(),
+  lng: real("lng").notNull(),
+  lines: text("lines").notNull(), // JSON array of subway lines
+  borough: text("borough"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -78,11 +105,26 @@ export const insertPropertySchema = createInsertSchema(properties).omit({
   extractedAt: true,
 });
 
+export const insertNeighborhoodEnrichmentAuditSchema = createInsertSchema(neighborhoodEnrichmentAudits).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSubwayStationSchema = createInsertSchema(subwayStations).omit({
+  lastUpdated: true,
+});
+
 export const propertyExtractionRequestSchema = z.object({
   streetEasyUrl: z.string().url("Must be a valid URL").refine(
     (url) => url.includes('streeteasy.com/building/'),
     "Must be a StreetEasy property listing URL"
   ),
+});
+
+export const neighborhoodEnrichmentRequestSchema = z.object({
+  lat: z.number().min(-90).max(90, "Latitude must be between -90 and 90"),
+  lng: z.number().min(-180).max(180, "Longitude must be between -180 and 180"),
+  address: z.string().optional(),
 });
 
 // API request validation schemas
@@ -110,11 +152,16 @@ export type InsertBoroughSchoolMedian = z.infer<typeof insertBoroughSchoolMedian
 export type BoroughSchoolMedian = typeof boroughSchoolMedians.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type Property = typeof properties.$inferSelect;
+export type InsertNeighborhoodEnrichmentAudit = z.infer<typeof insertNeighborhoodEnrichmentAuditSchema>;
+export type NeighborhoodEnrichmentAudit = typeof neighborhoodEnrichmentAudits.$inferSelect;
+export type InsertSubwayStation = z.infer<typeof insertSubwayStationSchema>;
+export type SubwayStation = typeof subwayStations.$inferSelect;
 
 // API request types
 export type SchoolScoreRequest = z.infer<typeof schoolScoreRequestSchema>;
 export type AnalyzePropertyRequest = z.infer<typeof analyzePropertyRequestSchema>;
 export type PropertyExtractionRequest = z.infer<typeof propertyExtractionRequestSchema>;
+export type NeighborhoodEnrichmentRequest = z.infer<typeof neighborhoodEnrichmentRequestSchema>;
 export type Borough = z.infer<typeof boroughEnum>;
 
 // Extracted property data type for extraction services

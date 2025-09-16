@@ -4,13 +4,15 @@ import { storage } from "./storage";
 import { SchoolScoringService } from "./services/schoolScoring";
 import { StreetEasyExtractor } from "./services/streetEasyExtractor";
 import { ExtractionOrchestrator } from "./services/extractionOrchestrator";
-import { schoolScoreRequestSchema, analyzePropertyRequestSchema, propertyExtractionRequestSchema, properties } from "@shared/schema";
+import { NeighborhoodEnrichmentOrchestrator } from "./services/neighborhoodEnrichmentOrchestrator";
+import { schoolScoreRequestSchema, analyzePropertyRequestSchema, propertyExtractionRequestSchema, neighborhoodEnrichmentRequestSchema, properties } from "@shared/schema";
 import { ZodError } from "zod";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const schoolScoringService = SchoolScoringService.getInstance();
+  const neighborhoodEnrichmentOrchestrator = NeighborhoodEnrichmentOrchestrator.getInstance();
 
   // School scoring API endpoint
   app.post("/api/school-score", async (req, res) => {
@@ -42,23 +44,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Property analysis endpoint (for future integration)
+  // Comprehensive neighborhood enrichment endpoint
+  app.post("/api/enrich-location", async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const validatedData = neighborhoodEnrichmentRequestSchema.parse(req.body);
+      const { lat, lng, address } = validatedData;
+
+      console.log(`Neighborhood enrichment requested for: ${address || `${lat}, ${lng}`}`);
+
+      // Use orchestrator to get comprehensive neighborhood data
+      const enrichmentResult = await neighborhoodEnrichmentOrchestrator.enrichLocation({
+        lat,
+        lng,
+        address
+      });
+      
+      res.json(enrichmentResult);
+      
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          error: "Invalid request data",
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+            code: e.code
+          }))
+        });
+      }
+      
+      console.error("Neighborhood enrichment API error:", error);
+      res.status(500).json({ 
+        error: "Failed to enrich location data",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Property analysis endpoint (enhanced with full neighborhood data)
   app.post("/api/analyze-property", async (req, res) => {
     try {
       // Validate request body with Zod
       const validatedData = analyzePropertyRequestSchema.parse(req.body);
       const { address, lat, lng, borough } = validatedData;
 
-      // Calculate school score as part of property analysis
+      console.log(`Property analysis requested for: ${address || `${lat}, ${lng}`} in ${borough}`);
+
+      // Get comprehensive neighborhood enrichment
+      const enrichmentResult = await neighborhoodEnrichmentOrchestrator.enrichLocation({
+        lat,
+        lng,
+        address,
+        borough
+      });
+
+      // Calculate school score separately for backwards compatibility
       const schoolScore = await schoolScoringService.calculateSchoolScore(lat, lng, borough);
       
-      // Return comprehensive property analysis (school score integrated)
+      // Return comprehensive property analysis with all enrichment data
       res.json({
         address,
         coordinates: { lat, lng },
         borough,
         schoolScore,
-        // Future: Add other property analysis components here
+        neighborhoodData: enrichmentResult,
         timestamp: new Date().toISOString()
       });
       
