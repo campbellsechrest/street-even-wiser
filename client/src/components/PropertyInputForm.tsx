@@ -121,11 +121,6 @@ export default function PropertyInputForm({
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <DollarSign className="w-5 h-5" />
-          <span>Property Analysis</span>
-        </CardTitle>
-        
         <p className="text-sm text-muted-foreground">
           Enter a StreetEasy URL for automatic data extraction, or search by address, or enter details manually.
         </p>
