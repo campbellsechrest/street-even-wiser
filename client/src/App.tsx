@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import PropertyInputForm from "@/components/PropertyInputForm";
 import StreetWiseScore from "@/components/StreetWiseScore";
 import CategoryBreakdown from "@/components/CategoryBreakdown";
@@ -1682,14 +1683,14 @@ function HomeContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header
         onSearch={(query) => console.log("Search:", query)}
         onToggleDark={toggleTheme}
         isDark={theme === "dark"}
       />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         {!analysisResult ? (
           <div className="space-y-8">
             <div className="text-center space-y-4">
@@ -1758,6 +1759,10 @@ function HomeContent() {
           </div>
         )}
       </main>
+      
+      <Footer
+        onPrivacyClick={() => console.log("Privacy policy clicked")}
+      />
     </div>
   );
 }
