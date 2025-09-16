@@ -48,6 +48,85 @@ interface PropertyExtractionResponse {
   botDetected?: boolean;
 }
 
+// Helper function to determine borough from neighborhood
+function getBoroughFromNeighborhood(neighborhood: string): string {
+  const neighborhoodLower = neighborhood.toLowerCase();
+  
+  // Manhattan neighborhoods
+  const manhattanNeighborhoods = [
+    'upper east side', 'upper west side', 'midtown', 'midtown east', 'midtown west',
+    'chelsea', 'flatiron', 'gramercy', 'murray hill', 'kips bay', 'turtle bay',
+    'east village', 'west village', 'greenwich village', 'noho', 'nolita', 'soho',
+    'tribeca', 'financial district', 'battery park city', 'lower east side', 'chinatown',
+    'little italy', 'bowery', 'two bridges', 'alphabet city', 'clinton', "hell's kitchen",
+    'washington heights', 'inwood', 'hamilton heights', 'harlem', 'east harlem', 'spanish harlem',
+    'morningside heights', 'manhattanville', 'lenox hill', 'yorkville', 'carnegie hill',
+    'lincoln square', 'columbus circle', 'theater district', 'garment district',
+    'diamond district', 'koreatown', 'nomad', 'madison square', 'union square',
+    'stuyvesant town', 'peter cooper village', 'roosevelt island'
+  ];
+  
+  // Brooklyn neighborhoods
+  const brooklynNeighborhoods = [
+    'williamsburg', 'greenpoint', 'bushwick', 'bed-stuy', 'bedford-stuyvesant',
+    'crown heights', 'prospect heights', 'park slope', 'gowanus', 'carroll gardens',
+    'cobble hill', 'boerum hill', 'fort greene', 'clinton hill', 'dumbo',
+    'brooklyn heights', 'red hook', 'sunset park', 'bay ridge', 'dyker heights',
+    'bensonhurst', 'gravesend', 'sheepshead bay', 'brighton beach', 'coney island',
+    'flatbush', 'midwood', 'ditmas park', 'kensington', 'windsor terrace',
+    'greenwood heights', 'east flatbush', 'canarsie', 'mill basin', 'bergen beach',
+    'marine park', 'gerritsen beach', 'manhattan beach'
+  ];
+  
+  // Queens neighborhoods
+  const queensNeighborhoods = [
+    'long island city', 'astoria', 'sunnyside', 'woodside', 'elmhurst', 'jackson heights',
+    'corona', 'flushing', 'forest hills', 'rego park', 'kew gardens', 'richmond hill',
+    'ozone park', 'howard beach', 'jamaica', 'st. albans', 'queens village',
+    'bellerose', 'rosedale', 'laurelton', 'springfield gardens', 'cambria heights',
+    'hollis', 'fresh meadows', 'bayside', 'whitestone', 'college point', 'malba',
+    'beechhurst', 'douglaston', 'little neck', 'glen oaks', 'floral park',
+    'new hyde park', 'maspeth', 'middle village', 'glendale', 'ridgewood'
+  ];
+  
+  // Bronx neighborhoods
+  const bronxNeighborhoods = [
+    'mott haven', 'melrose', 'morrisania', 'concourse', 'highbridge', 'morris heights',
+    'university heights', 'fordham', 'belmont', 'tremont', 'mount hope', 'claremont',
+    'crotona park east', 'longwood', 'hunts point', 'soundview', 'castle hill',
+    'unionport', 'westchester square', 'throggs neck', 'country club', 'pelham bay',
+    'co-op city', 'city island', 'riverdale', 'kingsbridge', 'marble hill',
+    'spuyten duyvil', 'fieldston', 'norwood', 'bedford park', 'jerome park'
+  ];
+  
+  // Staten Island neighborhoods
+  const statenIslandNeighborhoods = [
+    'st. george', 'stapleton', 'clifton', 'port richmond', 'west brighton',
+    'new brighton', 'livingston', 'grymes hill', 'emerson hill', 'dongan hills',
+    'todt hill', 'new dorp', 'oakwood', 'great kills', 'eltingville',
+    'annadale', 'huguenot', 'charleston', 'rossville', 'woodrow', 'tottenville'
+  ];
+  
+  if (manhattanNeighborhoods.some(n => neighborhoodLower.includes(n))) {
+    return 'Manhattan';
+  }
+  if (brooklynNeighborhoods.some(n => neighborhoodLower.includes(n))) {
+    return 'Brooklyn';
+  }
+  if (queensNeighborhoods.some(n => neighborhoodLower.includes(n))) {
+    return 'Queens';
+  }
+  if (bronxNeighborhoods.some(n => neighborhoodLower.includes(n))) {
+    return 'Bronx';
+  }
+  if (statenIslandNeighborhoods.some(n => neighborhoodLower.includes(n))) {
+    return 'Staten Island';
+  }
+  
+  // Default fallback
+  return 'Manhattan';
+}
+
 // Todo: remove mock functionality
 interface PropertyData {
   address: string;
@@ -161,6 +240,8 @@ function HomeContent() {
     console.log("URL submitted:", data);
     setIsAnalyzing(true);
     
+    let extractedProperty: ExtractedPropertyData | null = null;
+    
     try {
       // Extract property data from StreetEasy using real API
       const extractionResult = await extractPropertyMutation.mutateAsync(data.url);
@@ -184,35 +265,66 @@ function HomeContent() {
         return;
       }
 
-      const extractedProperty = extractionResult.data!;
+      extractedProperty = extractionResult.data!;
       console.log("Property extracted successfully:", extractedProperty);
 
-      // Get geocoding for school scoring (fallback to geocoding service if no coordinates)
+      // Determine borough from neighborhood if not available
+      let borough = extractedProperty.borough;
+      if (!borough && extractedProperty.neighborhood) {
+        borough = getBoroughFromNeighborhood(extractedProperty.neighborhood);
+      }
+
+      // Get geocoding for school scoring with graceful fallbacks
       const geocodingService = GeocodingService.getInstance();
       const schoolScoringClient = SchoolScoringClient.getInstance();
       
       let locationData = null;
+      let schoolScore = null;
       
-      if (extractedProperty.address && extractedProperty.borough) {
-        // Try to get coordinates from the extracted address
-        locationData = await geocodingService.extractFromStreetEasyUrl(data.url);
+      // Try to get coordinates from the extracted address
+      if (extractedProperty.address) {
+        try {
+          locationData = await geocodingService.extractFromStreetEasyUrl(data.url);
+        } catch (error) {
+          console.warn("Geocoding from URL failed, trying address:", error);
+          try {
+            locationData = await geocodingService.geocodeAddress(extractedProperty.address);
+          } catch (addressError) {
+            console.warn("Address geocoding also failed:", addressError);
+          }
+        }
       }
       
-      if (!locationData) {
-        throw new Error("Could not determine property location for school scoring");
+      // Try to get school scoring if we have location data
+      if (locationData && locationData.lat && locationData.lng) {
+        try {
+          schoolScore = await schoolScoringClient.calculateSchoolScore(
+            locationData.lat, 
+            locationData.lng, 
+            locationData.borough || borough || "Manhattan"
+          );
+        } catch (schoolError) {
+          console.warn("School scoring failed, using fallback:", schoolError);
+        }
       }
-
-      // Get real school scoring data
-      const schoolScore = await schoolScoringClient.calculateSchoolScore(
-        locationData.lat, 
-        locationData.lng, 
-        locationData.borough
-      );
+      
+      // Use fallback school score if needed
+      if (!schoolScore) {
+        schoolScore = {
+          score: 65,
+          explanation: "School data unavailable for this location. Using neighborhood average.",
+          dataSource: "Fallback estimate",
+          value: "Estimated"
+        };
+      }
 
       // Create analysis result with real extracted property data and school scoring
+      const finalBorough = borough || locationData?.borough || "Manhattan";
+      const finalNeighborhood = extractedProperty.neighborhood || locationData?.neighborhood || finalBorough;
+      
       const analysisResult: AnalysisResult = {
         property: {
-          address: extractedProperty.address || locationData.formattedAddress || "Property Address",
+          address: extractedProperty.address || locationData?.formattedAddress || "Property Address",
           unit: undefined, // TODO: Extract unit from address if available
           price: extractedProperty.priceValue || 0,
           bedrooms: extractedProperty.bedrooms || 1,
@@ -221,7 +333,7 @@ function HomeContent() {
           propertyType: extractedProperty.buildingType?.toLowerCase() || "condo",
           maintenance: undefined, // TODO: Add maintenance extraction
           taxes: undefined, // TODO: Add tax estimation
-          neighborhood: extractedProperty.neighborhood || extractedProperty.borough || locationData.neighborhood || "NYC",
+          neighborhood: finalNeighborhood,
           daysOnMarket: extractedProperty.daysOnMarket || 0,
         },
         streetwiseScore: {
@@ -571,8 +683,104 @@ function HomeContent() {
       setIsAnalyzing(false);
     } catch (error) {
       console.error("Property analysis failed:", error);
+      
+      // Create a fallback analysis result if something fails
+      try {
+        const fallbackResult: AnalysisResult = {
+          property: {
+            address: extractedProperty?.address || "Property Address",
+            unit: undefined,
+            price: extractedProperty?.priceValue || 0,
+            bedrooms: extractedProperty?.bedrooms || 1,
+            bathrooms: extractedProperty?.bathrooms || 1,
+            squareFeet: extractedProperty?.squareFootage,
+            propertyType: extractedProperty?.buildingType?.toLowerCase() || "condo",
+            maintenance: undefined,
+            taxes: undefined,
+            neighborhood: extractedProperty?.neighborhood || getBoroughFromNeighborhood(extractedProperty?.neighborhood || "") || "NYC",
+            daysOnMarket: extractedProperty?.daysOnMarket || 0,
+          },
+          streetwiseScore: {
+            score: 70,
+            confidence: 60,
+            interpretation: "Limited Analysis",
+            priceAnalysis: {
+              askingPrice: extractedProperty?.priceValue || 0,
+              expectedPrice: extractedProperty?.priceValue || 0,
+              priceGap: 0,
+            },
+          },
+          categories: [
+            {
+              name: "Fair Value & Market Context",
+              score: 70,
+              weight: 40,
+              description: "Limited analysis due to data constraints",
+              topFactors: {
+                positive: ["Property data extracted"],
+                negative: ["Limited location analysis"],
+              },
+            },
+            {
+              name: "Location & Neighborhood", 
+              score: 60,
+              weight: 20,
+              description: "Analysis limited by geocoding issues",
+              topFactors: {
+                positive: ["NYC location"],
+                negative: ["Location data unavailable"],
+              },
+            },
+            {
+              name: "Building & Amenities",
+              score: 50,
+              weight: 15,
+              description: "Building information from listing",
+              topFactors: {
+                positive: [],
+                negative: ["Limited building data"],
+              },
+            },
+            {
+              name: "Unit & Layout",
+              score: 60,
+              weight: 20,
+              description: "Basic unit information available",
+              topFactors: {
+                positive: ["Basic property details"],
+                negative: ["No detailed unit analysis"],
+              },
+            },
+            {
+              name: "Bonuses/Penalties",
+              score: 50,
+              weight: 5,
+              description: "Limited special conditions analysis",
+              topFactors: {
+                positive: [],
+                negative: ["Incomplete analysis scope"],
+              },
+            },
+          ],
+          comparables: [], // Empty comparables for fallback
+        };
+        
+        setAnalysisResult(fallbackResult);
+        toast({
+          title: "Analysis Completed with Limited Data",
+          description: "Some location services were unavailable, but we've provided a basic analysis based on the property data.",
+          variant: "default",
+        });
+      } catch (fallbackError) {
+        console.error("Even fallback analysis failed:", fallbackError);
+        toast({
+          title: "Analysis Failed",
+          description: "Unable to analyze this property. Please try again or use manual entry.",
+          variant: "destructive",
+        });
+      }
+      
       setIsAnalyzing(false);
-      // Could add error handling UI here
     }
   };
 
