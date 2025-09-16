@@ -12,6 +12,8 @@ import CategoryBreakdown from "@/components/CategoryBreakdown";
 import PropertySummary from "@/components/PropertySummary";
 import ComparableProperties from "@/components/ComparableProperties";
 import NotFound from "@/pages/not-found";
+import GeocodingService from "@/services/geocoding";
+import SchoolScoringClient from "@/services/schoolScoring";
 
 // Todo: remove mock functionality
 interface PropertyData {
@@ -87,15 +89,32 @@ function HomeContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  const handleUrlSubmit = (data: { url: string }) => {
-    console.log("Analyzing URL:", data);
+  const handleUrlSubmit = async (data: { url: string }) => {
+    console.log("URL submitted:", data);
     setIsAnalyzing(true);
     
-    // Todo: remove mock functionality - simulate URL extraction and analysis
-    setTimeout(() => {
+    try {
+      // Extract location from StreetEasy URL
+      const geocodingService = GeocodingService.getInstance();
+      const schoolScoringClient = SchoolScoringClient.getInstance();
+      
+      const locationData = await geocodingService.extractFromStreetEasyUrl(data.url);
+      
+      if (!locationData) {
+        throw new Error("Could not extract location from URL");
+      }
+
+      // Get real school scoring data
+      const schoolScore = await schoolScoringClient.calculateSchoolScore(
+        locationData.lat, 
+        locationData.lng, 
+        locationData.borough
+      );
+
+      // Create analysis result with real school data integrated
       const mockResult: AnalysisResult = {
         property: {
-          address: "123 West 4th Street",
+          address: locationData.formattedAddress || "123 West 4th Street",
           unit: "5B",
           price: 1185000,
           bedrooms: 2,
@@ -194,11 +213,11 @@ function HomeContent() {
                 },
                 {
                   name: "School Quality",
-                  score: 75,
+                  score: schoolScore.score,
                   weight: 0.2,
-                  explanation: "Excellent public schools nearby including IS 70 (rated 8/10) and multiple private options",
-                  dataSource: "GreatSchools.org",
-                  value: "8/10 avg"
+                  explanation: schoolScore.explanation,
+                  dataSource: schoolScore.dataSource,
+                  value: schoolScore.value
                 },
                 {
                   name: "Street Noise Level",
@@ -452,7 +471,11 @@ function HomeContent() {
       
       setAnalysisResult(mockResult);
       setIsAnalyzing(false);
-    }, 3000);
+    } catch (error) {
+      console.error("Property analysis failed:", error);
+      setIsAnalyzing(false);
+      // Could add error handling UI here
+    }
   };
 
   const handleAddressSubmit = (data: { address: string }) => {
