@@ -47,9 +47,31 @@ export const insertBoroughSchoolMedianSchema = createInsertSchema(boroughSchoolM
   lastUpdated: true,
 });
 
+// API request validation schemas
+export const boroughEnum = z.enum(["Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island"]);
+
+export const schoolScoreRequestSchema = z.object({
+  lat: z.number().min(-90).max(90, "Latitude must be between -90 and 90"),
+  lng: z.number().min(-180).max(180, "Longitude must be between -180 and 180"),
+  borough: boroughEnum,
+});
+
+export const analyzePropertyRequestSchema = z.object({
+  address: z.string().optional(),
+  lat: z.number().min(-90).max(90, "Latitude must be between -90 and 90"),
+  lng: z.number().min(-180).max(180, "Longitude must be between -180 and 180"),
+  borough: boroughEnum,
+});
+
+// Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertSchoolScoreAudit = z.infer<typeof insertSchoolScoreAuditSchema>;
 export type SchoolScoreAudit = typeof schoolScoreAudits.$inferSelect;
 export type InsertBoroughSchoolMedian = z.infer<typeof insertBoroughSchoolMedianSchema>;
 export type BoroughSchoolMedian = typeof boroughSchoolMedians.$inferSelect;
+
+// API request types
+export type SchoolScoreRequest = z.infer<typeof schoolScoreRequestSchema>;
+export type AnalyzePropertyRequest = z.infer<typeof analyzePropertyRequestSchema>;
+export type Borough = z.infer<typeof boroughEnum>;

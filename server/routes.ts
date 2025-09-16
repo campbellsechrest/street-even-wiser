@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { SchoolScoringService } from "./services/schoolScoring";
+import { schoolScoreRequestSchema, analyzePropertyRequestSchema } from "@shared/schema";
+import { ZodError } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const schoolScoringService = SchoolScoringService.getInstance();
@@ -9,18 +11,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // School scoring API endpoint
   app.post("/api/school-score", async (req, res) => {
     try {
-      const { lat, lng, borough } = req.body;
-      
-      if (!lat || !lng || !borough) {
-        return res.status(400).json({ 
-          error: "Missing required parameters: lat, lng, borough" 
-        });
-      }
+      // Validate request body with Zod
+      const validatedData = schoolScoreRequestSchema.parse(req.body);
+      const { lat, lng, borough } = validatedData;
 
       const result = await schoolScoringService.calculateSchoolScore(lat, lng, borough);
       res.json(result);
       
     } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          error: "Invalid request data",
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+            code: e.code
+          }))
+        });
+      }
+      
       console.error("School scoring API error:", error);
       res.status(500).json({ 
         error: "Failed to calculate school score",
@@ -32,13 +41,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Property analysis endpoint (for future integration)
   app.post("/api/analyze-property", async (req, res) => {
     try {
-      const { address, lat, lng, borough } = req.body;
-      
-      if (!lat || !lng || !borough) {
-        return res.status(400).json({ 
-          error: "Missing required parameters for property analysis" 
-        });
-      }
+      // Validate request body with Zod
+      const validatedData = analyzePropertyRequestSchema.parse(req.body);
+      const { address, lat, lng, borough } = validatedData;
 
       // Calculate school score as part of property analysis
       const schoolScore = await schoolScoringService.calculateSchoolScore(lat, lng, borough);
@@ -54,6 +59,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
     } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          error: "Invalid request data",
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+            code: e.code
+          }))
+        });
+      }
+      
       console.error("Property analysis API error:", error);
       res.status(500).json({ 
         error: "Failed to analyze property",
