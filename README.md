@@ -48,7 +48,7 @@ Streetwise democratizes access to professional-grade property analysis for NYC h
    - Special conditions and deal-breakers
    - Tax abatements, assessments, restrictions
 
-### Advanced ML Features
+### Model Highlights Features
 - **Renovation Level Classifier**: 96% accuracy in detecting renovation quality from listing text
 - **Hedonic Pricing Model**: Market-aware price predictions using Ridge/ElasticNet regression
 - **Smart Data Extraction**: LLM-powered parsing of unstructured listing data
@@ -205,61 +205,24 @@ GET /api/v1/market?neighborhood=Upper+East+Side&timeframe=12_months
 - [ ] Mobile applications
 - [ ] Investment analysis tools
 
-## 🧪 Testing
-
-```bash
-# Run unit tests
-npm test
-python -m pytest
-
-# Run integration tests
-npm run test:integration
-python -m pytest tests/integration
-
-# Run E2E tests
-npm run test:e2e
-```
-
 ## 📊 Model Performance
 
 | Model | Accuracy | Notes |
 |-------|----------|-------|
 | Renovation Classifier | 96% | TF-IDF + Logistic Regression |
-| Price Prediction | MAE: $47K | XGBoost with segment features |
 | School Zone Matching | 99.2% | SODA spatial queries |
 | Confidence Scoring | 84% avg | Ensemble approach |
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## ⚖️ Legal & Compliance
 
 - Respects robots.txt and terms of service
 - Implements rate limiting and backoff strategies
-- GDPR/CCPA compliant
 - Not intended as professional appraisal advice
-
-## 🙏 Acknowledgments
-
-- NYC OpenData for comprehensive public datasets
-- StreetEasy for listing data structure inspiration
-- The scikit-learn and XGBoost communities
-
-## 📧 Contact
-
-For questions or feedback, please open an issue or contact the maintainers.
 
 ---
 
-**Built with ❤️ for NYC home buyers**
+**Built with ❤️ and a very helpful Replit agent **
