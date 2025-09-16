@@ -83,70 +83,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Property extraction endpoint
   app.post("/api/properties/extract", async (req, res) => {
+    console.log("Property extraction endpoint called with body:", req.body);
     try {
       // Validate request body with Zod
       const validatedData = propertyExtractionRequestSchema.parse(req.body);
       const { streetEasyUrl } = validatedData;
+      
+      // Normalize URL to prevent duplicates
+      const normalizedUrl = StreetEasyExtractor.normalizeStreetEasyURL(streetEasyUrl);
 
       // Check if we already have this property in the database
       const existingProperty = await db
         .select()
         .from(properties)
-        .where(eq(properties.streetEasyUrl, streetEasyUrl))
+        .where(eq(properties.streetEasyUrl, normalizedUrl))
         .limit(1);
 
       if (existingProperty.length > 0) {
-        // Return existing property data
-        return res.json({
-          success: true,
-          data: existingProperty[0],
-          cached: true,
-          message: "Property data retrieved from cache"
-        });
+        const cached = existingProperty[0];
+        
+        // Check if the cached extraction was successful
+        if (cached.extractionSuccess === 1) {
+          // Return successful cached property data
+          return res.json({
+            success: true,
+            data: cached,
+            cached: true,
+            message: "Property data retrieved from cache"
+          });
+        } else {
+          // Return failed cached extraction with 422 status
+          return res.status(422).json({
+            success: false,
+            error: cached.extractionError || 'Previous extraction failed',
+            botDetected: cached.extractionError?.includes('Bot detection') || false,
+            cached: true,
+            message: "Previous extraction attempt failed. You can retry."
+          });
+        }
       }
 
       // Extract property data from StreetEasy
       const extractionResult = await StreetEasyExtractor.extractPropertyData(streetEasyUrl);
 
-      if (!extractionResult.success) {
-        // Store failed extraction attempt
-        await db.insert(properties).values({
-          streetEasyUrl,
-          extractionSuccess: 0,
-          extractionError: extractionResult.error || 'Unknown extraction error',
-        });
+      // Prepare property data for upsert
+      const propertyData = {
+        streetEasyUrl: normalizedUrl,
+        address: extractionResult.data?.address || null,
+        neighborhood: extractionResult.data?.neighborhood || null,
+        borough: extractionResult.data?.borough || null,
+        price: extractionResult.data?.price || null,
+        priceValue: extractionResult.data?.priceValue || null,
+        bedrooms: extractionResult.data?.bedrooms || null,
+        bathrooms: extractionResult.data?.bathrooms || null,
+        rooms: extractionResult.data?.rooms || null,
+        squareFootage: extractionResult.data?.squareFootage || null,
+        pricePerSquareFoot: extractionResult.data?.pricePerSquareFoot || null,
+        listingType: extractionResult.data?.listingType || null,
+        status: extractionResult.data?.status || null,
+        buildingType: extractionResult.data?.buildingType || null,
+        daysOnMarket: extractionResult.data?.daysOnMarket || null,
+        listedDate: extractionResult.data?.listedDate || null,
+        soldDate: extractionResult.data?.soldDate || null,
+        extractionSuccess: extractionResult.success ? 1 : 0,
+        extractionError: extractionResult.error || null,
+      };
 
+      // Use upsert with onConflictDoUpdate for streeteasy_url uniqueness
+      const savedProperty = await db
+        .insert(properties)
+        .values(propertyData)
+        .onConflictDoUpdate({
+          target: properties.streetEasyUrl,
+          set: {
+            address: propertyData.address,
+            neighborhood: propertyData.neighborhood,
+            borough: propertyData.borough,
+            price: propertyData.price,
+            priceValue: propertyData.priceValue,
+            bedrooms: propertyData.bedrooms,
+            bathrooms: propertyData.bathrooms,
+            rooms: propertyData.rooms,
+            squareFootage: propertyData.squareFootage,
+            pricePerSquareFoot: propertyData.pricePerSquareFoot,
+            listingType: propertyData.listingType,
+            status: propertyData.status,
+            buildingType: propertyData.buildingType,
+            daysOnMarket: propertyData.daysOnMarket,
+            listedDate: propertyData.listedDate,
+            soldDate: propertyData.soldDate,
+            extractionSuccess: propertyData.extractionSuccess,
+            extractionError: propertyData.extractionError,
+            extractedAt: new Date(),
+          }
+        })
+        .returning();
+
+      if (!extractionResult.success) {
         return res.status(422).json({
           success: false,
           error: extractionResult.error || 'Failed to extract property data',
-          botDetected: extractionResult.botDetected || false
+          botDetected: extractionResult.botDetected || false,
+          cached: false
         });
       }
-
-      // Store successful extraction
-      const propertyData = {
-        streetEasyUrl,
-        address: extractionResult.data?.address,
-        neighborhood: extractionResult.data?.neighborhood,
-        borough: extractionResult.data?.borough,
-        price: extractionResult.data?.price,
-        priceValue: extractionResult.data?.priceValue,
-        bedrooms: extractionResult.data?.bedrooms,
-        bathrooms: extractionResult.data?.bathrooms,
-        rooms: extractionResult.data?.rooms,
-        squareFootage: extractionResult.data?.squareFootage,
-        pricePerSquareFoot: extractionResult.data?.pricePerSquareFoot,
-        listingType: extractionResult.data?.listingType,
-        status: extractionResult.data?.status,
-        buildingType: extractionResult.data?.buildingType,
-        daysOnMarket: extractionResult.data?.daysOnMarket,
-        listedDate: extractionResult.data?.listedDate,
-        soldDate: extractionResult.data?.soldDate,
-        extractionSuccess: 1,
-        extractionError: null,
-      };
-
-      const savedProperty = await db.insert(properties).values(propertyData).returning();
 
       return res.json({
         success: true,

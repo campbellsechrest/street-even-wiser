@@ -36,6 +36,27 @@ export class StreetEasyExtractor {
   };
 
   /**
+   * Normalize StreetEasy URL to prevent duplicates
+   */
+  static normalizeStreetEasyURL(url: string): string {
+    try {
+      const parsed = new URL(url);
+      // Remove www prefix
+      let hostname = parsed.hostname.replace(/^www\./, '');
+      // Lowercase hostname
+      hostname = hostname.toLowerCase();
+      // Remove query parameters and hash
+      parsed.search = '';
+      parsed.hash = '';
+      // Rebuild URL and trim trailing slashes
+      const normalized = `${parsed.protocol}//${hostname}${parsed.pathname}`;
+      return normalized.replace(/\/+$/, '');
+    } catch {
+      return url;
+    }
+  }
+
+  /**
    * Extract property data from StreetEasy URL
    */
   static async extractPropertyData(url: string): Promise<StreetEasyPropertyData> {
@@ -55,9 +76,12 @@ export class StreetEasyExtractor {
       });
 
       if (!response.ok) {
+        // Check for bot detection status codes
+        const botDetected = response.status === 403 || response.status === 429;
         return {
           success: false,
-          error: `Failed to fetch page: ${response.status} ${response.statusText}`
+          error: `Failed to fetch page: ${response.status} ${response.statusText}`,
+          botDetected
         };
       }
 
@@ -95,7 +119,8 @@ export class StreetEasyExtractor {
   private static isValidStreetEasyURL(url: string): boolean {
     try {
       const parsed = new URL(url);
-      return parsed.hostname === 'streeteasy.com' && 
+      const hostname = parsed.hostname.toLowerCase();
+      return (hostname === 'streeteasy.com' || hostname === 'www.streeteasy.com') && 
              parsed.pathname.includes('/building/');
     } catch {
       return false;
