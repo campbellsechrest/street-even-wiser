@@ -1695,7 +1695,7 @@ function HomeContent() {
           <div className="space-y-8">
             <div className="text-center space-y-4">
               <h1 className="text-4xl font-bold text-foreground">
-                AI-Powered Real Estate Analysis
+                AI-Powered Property Analysis
               </h1>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Understand the value of an NYC property listing with our proprietary Streetwise Score and data-driven insights.
