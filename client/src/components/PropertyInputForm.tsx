@@ -120,12 +120,6 @@ export default function PropertyInputForm({
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <p className="text-sm text-muted-foreground">
-          Enter a StreetEasy URL for automatic data extraction, or search by address, or enter details manually.
-        </p>
-      </CardHeader>
-      
       <CardContent className="space-y-6">
         {/* Primary: URL Input */}
         {inputMethod === "url" && !showManualCorrections && (
