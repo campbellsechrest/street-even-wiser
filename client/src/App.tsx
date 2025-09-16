@@ -1698,8 +1698,7 @@ function HomeContent() {
                 AI-Powered Real Estate Analysis
               </h1>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Get comprehensive property valuations with our proprietary Streetwise Score. 
-                Analyze NYC Metro Area properties with professional-grade insights.
+                Understand the value of an NYC property listing with our proprietary Streetwise Score and data-driven insights.
               </p>
             </div>
             
