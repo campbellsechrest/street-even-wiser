@@ -5,7 +5,9 @@ import { SchoolScoringService } from "./services/schoolScoring";
 import { StreetEasyExtractor } from "./services/streetEasyExtractor";
 import { ExtractionOrchestrator } from "./services/extractionOrchestrator";
 import { NeighborhoodEnrichmentOrchestrator } from "./services/neighborhoodEnrichmentOrchestrator";
-import { schoolScoreRequestSchema, analyzePropertyRequestSchema, propertyExtractionRequestSchema, neighborhoodEnrichmentRequestSchema, properties } from "@shared/schema";
+import { MarketAnalysisService } from "./services/marketAnalysisService";
+import { GeocodingService } from "./services/geocoding";
+import { schoolScoreRequestSchema, analyzePropertyRequestSchema, propertyExtractionRequestSchema, neighborhoodEnrichmentRequestSchema, marketAnalysisRequestSchema, properties, MarketAnalysisRequest } from "@shared/schema";
 import { ZodError } from "zod";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -13,6 +15,8 @@ import { eq } from "drizzle-orm";
 export async function registerRoutes(app: Express): Promise<Server> {
   const schoolScoringService = SchoolScoringService.getInstance();
   const neighborhoodEnrichmentOrchestrator = NeighborhoodEnrichmentOrchestrator.getInstance();
+  const marketAnalysisService = MarketAnalysisService.getInstance();
+  const geocodingService = GeocodingService.getInstance();
 
   // School scoring API endpoint
   app.post("/api/school-score", async (req, res) => {
@@ -265,6 +269,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Property extraction API error:", error);
       res.status(500).json({ 
         error: "Failed to extract property data",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Market analysis endpoint for comprehensive comparable property search
+  app.post("/api/analyze-market", async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const validatedData = marketAnalysisRequestSchema.parse(req.body);
+      let { address, lat, lng } = validatedData;
+
+      console.log(`Market analysis requested for: ${address}`);
+
+      // Geocode address if coordinates not provided
+      if (!lat || !lng) {
+        console.log(`[MarketAnalysis] Geocoding address: ${address}`);
+        const geocodingResult = await geocodingService.geocodeAddress(address);
+        
+        if (!geocodingResult) {
+          return res.status(400).json({
+            error: "Unable to geocode address",
+            message: "Could not find coordinates for the provided address. Please verify the address is correct."
+          });
+        }
+        
+        lat = geocodingResult.lat;
+        lng = geocodingResult.lng;
+        console.log(`[MarketAnalysis] Geocoded to ${lat}, ${lng} (confidence: ${geocodingResult.confidence})`);
+      }
+
+      // Prepare market analysis request with coordinates
+      const marketRequest: MarketAnalysisRequest = {
+        ...validatedData,
+        lat,
+        lng
+      };
+
+      // Perform comprehensive market analysis
+      const analysisResult = await marketAnalysisService.analyzeMarket(marketRequest);
+      
+      res.json(analysisResult);
+      
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          error: "Invalid request data",
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+            code: e.code
+          }))
+        });
+      }
+      
+      console.error("Market analysis API error:", error);
+      res.status(500).json({ 
+        error: "Failed to analyze market",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
