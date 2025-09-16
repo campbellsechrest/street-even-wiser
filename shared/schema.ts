@@ -56,6 +56,7 @@ export const properties = pgTable("properties", {
   extractedAt: timestamp("extracted_at").defaultNow(),
   extractionSuccess: integer("extraction_success").notNull().default(1), // 1 for success, 0 for failed
   extractionError: text("extraction_error"),
+  extractionMethod: text("extraction_method").default("http"), // 'http', 'firecrawl', 'alternative'
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -115,3 +116,18 @@ export type SchoolScoreRequest = z.infer<typeof schoolScoreRequestSchema>;
 export type AnalyzePropertyRequest = z.infer<typeof analyzePropertyRequestSchema>;
 export type PropertyExtractionRequest = z.infer<typeof propertyExtractionRequestSchema>;
 export type Borough = z.infer<typeof boroughEnum>;
+
+// Extracted property data type for extraction services
+export type ExtractedPropertyData = {
+  url: string;
+  askingPrice?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  squareFeet?: number | null;
+  address?: string | null;
+  borough?: string | null;
+  neighborhood?: string | null;
+  status?: string;
+  extractionMethod?: string;
+  extractedAt?: string;
+};

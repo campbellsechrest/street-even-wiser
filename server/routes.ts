@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { SchoolScoringService } from "./services/schoolScoring";
 import { StreetEasyExtractor } from "./services/streetEasyExtractor";
+import { ExtractionOrchestrator } from "./services/extractionOrchestrator";
 import { schoolScoreRequestSchema, analyzePropertyRequestSchema, propertyExtractionRequestSchema, properties } from "@shared/schema";
 import { ZodError } from "zod";
 import { db } from "./db";
@@ -123,30 +124,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Extract property data from StreetEasy
-      const extractionResult = await StreetEasyExtractor.extractPropertyData(streetEasyUrl);
+      // Extract property data using orchestrated fallback system
+      const orchestrator = ExtractionOrchestrator.getInstance();
+      const extractionResult = await orchestrator.extractPropertyData(streetEasyUrl, false);
 
-      // Prepare property data for upsert
+      // Prepare property data for upsert - handle both old and new data formats
+      const extractedData = extractionResult.data;
       const propertyData = {
         streetEasyUrl: normalizedUrl,
-        address: extractionResult.data?.address || null,
-        neighborhood: extractionResult.data?.neighborhood || null,
-        borough: extractionResult.data?.borough || null,
-        price: extractionResult.data?.price || null,
-        priceValue: extractionResult.data?.priceValue || null,
-        bedrooms: extractionResult.data?.bedrooms || null,
-        bathrooms: extractionResult.data?.bathrooms || null,
-        rooms: extractionResult.data?.rooms || null,
-        squareFootage: extractionResult.data?.squareFootage || null,
-        pricePerSquareFoot: extractionResult.data?.pricePerSquareFoot || null,
-        listingType: extractionResult.data?.listingType || null,
-        status: extractionResult.data?.status || null,
-        buildingType: extractionResult.data?.buildingType || null,
-        daysOnMarket: extractionResult.data?.daysOnMarket || null,
-        listedDate: extractionResult.data?.listedDate || null,
-        soldDate: extractionResult.data?.soldDate || null,
+        address: extractedData?.address || null,
+        neighborhood: extractedData?.neighborhood || null,
+        borough: extractedData?.borough || null,
+        price: extractedData?.askingPrice ? `$${extractedData.askingPrice.toLocaleString()}` : null,
+        priceValue: extractedData?.askingPrice || null,
+        bedrooms: extractedData?.bedrooms || null,
+        bathrooms: extractedData?.bathrooms || null,
+        rooms: null, // Not extracted by new system
+        squareFootage: extractedData?.squareFeet || null,
+        pricePerSquareFoot: extractedData?.askingPrice && extractedData?.squareFeet ? 
+          Math.round(extractedData.askingPrice / extractedData.squareFeet) : null,
+        listingType: extractedData?.status?.toLowerCase().includes('rent') ? 'rental' : 'sale',
+        status: extractedData?.status || null,
+        buildingType: null, // Not extracted by new system yet
+        daysOnMarket: null, // Not extracted by new system yet
+        listedDate: null, // Not extracted by new system yet
+        soldDate: null, // Not extracted by new system yet
         extractionSuccess: extractionResult.success ? 1 : 0,
         extractionError: extractionResult.error || null,
+        extractionMethod: extractionResult.method || 'unknown',
       };
 
       // Use upsert with onConflictDoUpdate for streeteasy_url uniqueness
