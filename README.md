@@ -1,4 +1,4 @@
-# Streetwise 🏠
+# Streetwise 2.0: Even Wiser 🏠
 
 **AI-powered real estate valuation platform for smarter home buying decisions in NYC**
 
