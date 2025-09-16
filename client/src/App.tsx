@@ -322,6 +322,21 @@ function HomeContent() {
       const finalBorough = borough || locationData?.borough || "Manhattan";
       const finalNeighborhood = extractedProperty.neighborhood || locationData?.neighborhood || finalBorough;
       
+      // Generate contextual factors based on extracted property data
+      const propertyDataForFactors = {
+        address: extractedProperty.address || locationData?.formattedAddress || "",
+        unit: undefined, // TODO: Extract unit from address if available
+        price: extractedProperty.priceValue || 0,
+        bedrooms: extractedProperty.bedrooms || 1,
+        bathrooms: extractedProperty.bathrooms || 1,
+        squareFeet: extractedProperty.squareFootage,
+        propertyType: extractedProperty.buildingType?.toLowerCase() || "condo",
+        maintenance: undefined, // TODO: Add maintenance extraction
+        taxes: undefined, // TODO: Add tax estimation
+        description: ""
+      };
+      const contextualFactors = generateContextualFactors(propertyDataForFactors);
+      
       const analysisResult: AnalysisResult = {
         property: {
           address: extractedProperty.address || locationData?.formattedAddress || "Property Address",
@@ -352,10 +367,7 @@ function HomeContent() {
             score: 82,
             weight: 40,
             description: "Asking price vs. comp-adjusted expected price",
-            topFactors: {
-              positive: ["Below market pricing", "Strong comparable sales"],
-              negative: ["High days on market"],
-            },
+            topFactors: contextualFactors.market,
             methodology: {
               baseScore: 73,
               calculation: "Hedonic Model: $1,250,000 expected → $1,185,000 listed = -5.2% gap → S-curve: 73 → Market adjustment: 1.12x → Final: 82",
@@ -405,10 +417,7 @@ function HomeContent() {
             score: 75,
             weight: 20,
             description: "Transit access, schools, noise, amenities",
-            topFactors: {
-              positive: ["Close to subway", "Top-rated schools"],
-              negative: ["Street noise", "Limited parking"],
-            },
+            topFactors: contextualFactors.location,
             methodology: {
               baseScore: 80,
               calculation: "Base Score (80) + Transit Access (+8) + Schools (+5) + Noise (-10) + Walkability (+7) + Parking (-5) = 75",
@@ -466,10 +475,7 @@ function HomeContent() {
             score: 68,
             weight: 15,
             description: "Building quality, amenities, services",
-            topFactors: {
-              positive: ["Doorman", "Gym facility"],
-              negative: ["High maintenance fees", "Older building"],
-            },
+            topFactors: contextualFactors.building,
             methodology: {
               baseScore: 60,
               calculation: "Base Score (60) + Doorman (+12) + Amenities (+8) + Building Age (-7) + Maintenance (-5) = 68",
@@ -527,10 +533,7 @@ function HomeContent() {
             score: 85,
             weight: 20,
             description: "Renovation, features, layout efficiency",
-            topFactors: {
-              positive: ["Recent renovation", "Great natural light"],
-              negative: ["Small bathroom"],
-            },
+            topFactors: contextualFactors.unit,
             methodology: {
               baseScore: 75,
               calculation: "Base Score (75) + Renovation Quality (+15) + Natural Light (+8) + Kitchen (+7) + Layout (-5) + Storage (-3) = 85",
@@ -588,10 +591,7 @@ function HomeContent() {
             score: 72,
             weight: 5,
             description: "Special conditions and deal-breakers",
-            topFactors: {
-              positive: ["Tax abatement", "Pets allowed"],
-              negative: ["Flip tax"],
-            },
+            topFactors: contextualFactors.bonus,
             methodology: {
               baseScore: 50,
               calculation: "Base Score (50) + Tax Abatement (+25) + Pet Policy (+5) + Flip Tax (-8) = 72",
@@ -686,6 +686,21 @@ function HomeContent() {
       
       // Create a fallback analysis result if something fails
       try {
+        // Generate contextual factors for fallback based on extracted property data
+        const fallbackPropertyData = {
+          address: extractedProperty?.address || "",
+          unit: undefined,
+          price: extractedProperty?.priceValue || 0,
+          bedrooms: extractedProperty?.bedrooms || 1,
+          bathrooms: extractedProperty?.bathrooms || 1,
+          squareFeet: extractedProperty?.squareFootage,
+          propertyType: extractedProperty?.buildingType?.toLowerCase() || "unknown",
+          maintenance: undefined,
+          taxes: undefined,
+          description: ""
+        };
+        const fallbackContextualFactors = generateContextualFactors(fallbackPropertyData);
+        
         const fallbackResult: AnalysisResult = {
           property: {
             address: extractedProperty?.address || "Property Address",
@@ -716,50 +731,35 @@ function HomeContent() {
               score: 70,
               weight: 40,
               description: "Limited analysis due to data constraints",
-              topFactors: {
-                positive: ["Property data extracted"],
-                negative: ["Limited location analysis"],
-              },
+              topFactors: fallbackContextualFactors.market,
             },
             {
               name: "Location & Neighborhood", 
               score: 60,
               weight: 20,
               description: "Analysis limited by geocoding issues",
-              topFactors: {
-                positive: ["NYC location"],
-                negative: ["Location data unavailable"],
-              },
+              topFactors: fallbackContextualFactors.location,
             },
             {
               name: "Building & Amenities",
               score: 50,
               weight: 15,
               description: "Building information from listing",
-              topFactors: {
-                positive: [],
-                negative: ["Limited building data"],
-              },
+              topFactors: fallbackContextualFactors.building,
             },
             {
               name: "Unit & Layout",
               score: 60,
               weight: 20,
               description: "Basic unit information available",
-              topFactors: {
-                positive: ["Basic property details"],
-                negative: ["No detailed unit analysis"],
-              },
+              topFactors: fallbackContextualFactors.unit,
             },
             {
               name: "Bonuses/Penalties",
               score: 50,
               weight: 5,
               description: "Limited special conditions analysis",
-              topFactors: {
-                positive: [],
-                negative: ["Incomplete analysis scope"],
-              },
+              topFactors: fallbackContextualFactors.bonus,
             },
           ],
           comparables: [], // Empty comparables for fallback
@@ -790,6 +790,20 @@ function HomeContent() {
     
     // Todo: remove mock functionality - simulate address search and analysis
     setTimeout(() => {
+      // Generate contextual factors based on mock property data
+      const mockPropertyData = {
+        address: data.address,
+        unit: undefined,
+        price: 1150000,
+        bedrooms: 2,
+        bathrooms: 1,
+        squareFeet: 1100,
+        propertyType: "condo",
+        maintenance: 950,
+        taxes: 800,
+        description: ""
+      };
+      const contextualFactors = generateContextualFactors(mockPropertyData);
       const mockResult: AnalysisResult = {
         property: {
           address: data.address,
@@ -820,50 +834,35 @@ function HomeContent() {
             score: 68,
             weight: 40,
             description: "Asking price vs. comp-adjusted expected price",
-            topFactors: {
-              positive: ["Reasonable pricing"],
-              negative: ["Limited data", "Address-only analysis"],
-            },
+            topFactors: contextualFactors.market,
           },
           {
             name: "Location & Neighborhood", 
             score: 75,
             weight: 20,
             description: "Transit access, schools, noise, amenities",
-            topFactors: {
-              positive: ["Good neighborhood", "Transit access"],
-              negative: ["Unknown specific location factors"],
-            },
+            topFactors: contextualFactors.location,
           },
           {
             name: "Building & Amenities",
             score: 50,
             weight: 15,
             description: "Building quality, amenities, services",
-            topFactors: {
-              positive: [],
-              negative: ["No building data available"],
-            },
+            topFactors: contextualFactors.building,
           },
           {
             name: "Unit & Layout",
             score: 50,
             weight: 20,
             description: "Renovation, features, layout efficiency",
-            topFactors: {
-              positive: [],
-              negative: ["No unit details available"],
-            },
+            topFactors: contextualFactors.unit,
           },
           {
             name: "Bonuses/Penalties",
             score: 50,
             weight: 5,
             description: "Special conditions and deal-breakers",
-            topFactors: {
-              positive: [],
-              negative: ["Limited analysis scope"],
-            },
+            topFactors: contextualFactors.bonus,
           },
         ],
         comparables: [
@@ -887,86 +886,251 @@ function HomeContent() {
     }, 2500);
   };
 
+  // Helper function to generate contextual top factors based on available data
+  const generateContextualFactors = (data: any) => {
+    const hasPrice = data.price && data.price > 0;
+    const hasMaintenance = data.maintenance && data.maintenance > 0;
+    const hasTaxes = data.taxes !== undefined && data.taxes >= 0;
+    const hasSquareFeet = data.squareFeet && data.squareFeet > 0;
+    const hasAddress = data.address && data.address.trim().length > 0;
+    const hasUnit = data.unit && data.unit.trim().length > 0;
+    const hasDescription = data.description && data.description.trim().length > 0;
+    
+    const marketFactors = {
+      positive: [] as string[],
+      negative: [] as string[]
+    };
+    
+    const locationFactors = {
+      positive: [] as string[],
+      negative: [] as string[]
+    };
+    
+    const buildingFactors = {
+      positive: [] as string[],
+      negative: [] as string[]
+    };
+    
+    const unitFactors = {
+      positive: [] as string[],
+      negative: [] as string[]
+    };
+    
+    const bonusFactors = {
+      positive: [] as string[],
+      negative: [] as string[]
+    };
+
+    // Market Context factors - only if we have relevant data
+    if (hasPrice) {
+      marketFactors.positive.push("Price information provided");
+      if (hasSquareFeet) {
+        const pricePerSqFt = data.price / data.squareFeet;
+        if (pricePerSqFt < 1000) {
+          marketFactors.positive.push("Competitive price per square foot");
+        } else if (pricePerSqFt > 1500) {
+          marketFactors.negative.push("High price per square foot");
+        }
+      }
+    } else {
+      marketFactors.negative.push("No pricing information available");
+    }
+
+    // Location factors - limited without geocoding
+    if (hasAddress) {
+      locationFactors.positive.push("Address provided for analysis");
+      // Basic NYC borough detection
+      const addressLower = data.address.toLowerCase();
+      if (addressLower.includes('manhattan') || /\b(east|west|north|south)\s+\d+/.test(addressLower)) {
+        locationFactors.positive.push("Manhattan location identified");
+      }
+    } else {
+      locationFactors.negative.push("Limited location information");
+    }
+
+    // Building factors - based on available data
+    if (data.propertyType) {
+      buildingFactors.positive.push(`${data.propertyType.charAt(0).toUpperCase() + data.propertyType.slice(1)} building type`);
+      
+      if (data.propertyType === 'coop') {
+        buildingFactors.negative.push("Co-op board approval required");
+      }
+    }
+    
+    if (hasMaintenance) {
+      if (data.maintenance > 2000) {
+        buildingFactors.negative.push("High maintenance fees");
+      } else if (data.maintenance < 800) {
+        buildingFactors.positive.push("Low maintenance fees");
+      } else {
+        buildingFactors.positive.push("Reasonable maintenance fees");
+      }
+    } else {
+      buildingFactors.negative.push("No maintenance information provided");
+    }
+
+    // Unit factors - based on layout and features
+    if (data.bedrooms && data.bathrooms) {
+      if (data.bathrooms >= data.bedrooms) {
+        unitFactors.positive.push("Good bedroom to bathroom ratio");
+      }
+      
+      if (data.bedrooms >= 2 && data.bathrooms >= 2) {
+        unitFactors.positive.push("Multiple bedrooms and bathrooms");
+      }
+    }
+    
+    if (hasSquareFeet) {
+      if (data.squareFeet > 1500) {
+        unitFactors.positive.push("Spacious layout");
+      } else if (data.squareFeet < 800) {
+        unitFactors.negative.push("Compact size");
+      }
+    } else {
+      unitFactors.negative.push("No square footage information");
+    }
+
+    if (hasDescription) {
+      unitFactors.positive.push("Detailed property description available");
+    }
+
+    // Bonus/Penalty factors
+    if (hasTaxes) {
+      if (data.taxes === 0) {
+        bonusFactors.positive.push("No property taxes reported");
+      } else if (data.taxes < 1000) {
+        bonusFactors.positive.push("Low property taxes");
+      } else if (data.taxes > 3000) {
+        bonusFactors.negative.push("High property taxes");
+      }
+    } else {
+      bonusFactors.negative.push("Tax information not provided");
+    }
+
+    if (hasUnit) {
+      bonusFactors.positive.push("Specific unit identified");
+    }
+
+    // Ensure we have at least some factors for each category
+    if (marketFactors.positive.length === 0 && marketFactors.negative.length === 0) {
+      marketFactors.negative.push("Insufficient data for market analysis");
+    }
+    
+    if (locationFactors.positive.length === 0 && locationFactors.negative.length === 0) {
+      locationFactors.negative.push("Limited location analysis without geocoding");
+    }
+    
+    if (buildingFactors.positive.length === 0 && buildingFactors.negative.length === 0) {
+      buildingFactors.negative.push("Building details not available");
+    }
+    
+    if (unitFactors.positive.length === 0 && unitFactors.negative.length === 0) {
+      unitFactors.negative.push("Limited unit information provided");
+    }
+    
+    if (bonusFactors.positive.length === 0 && bonusFactors.negative.length === 0) {
+      bonusFactors.positive.push("Manual entry allows custom analysis");
+    }
+
+    return {
+      market: marketFactors,
+      location: locationFactors,
+      building: buildingFactors,
+      unit: unitFactors,
+      bonus: bonusFactors
+    };
+  };
+
   const handleManualSubmit = (data: any) => {
     console.log("Analyzing manual data:", data);
     setIsAnalyzing(true);
     
-    // Todo: remove mock functionality - simulate manual data analysis
+    // Generate contextual factors based on available data
+    const contextualFactors = generateContextualFactors(data);
+    
+    // Calculate confidence based on data completeness
+    const dataFields = [data.price, data.bedrooms, data.bathrooms, data.squareFeet, data.maintenance, data.taxes, data.address];
+    const providedFields = dataFields.filter(field => field !== undefined && field !== null && field !== "").length;
+    const confidence = Math.min(95, 40 + (providedFields * 8)); // Base 40% + 8% per field
+    
+    // Determine neighborhood from address if possible
+    let neighborhood = "NYC Area";
+    if (data.address) {
+      const addressLower = data.address.toLowerCase();
+      if (addressLower.includes('manhattan') || /\b(east|west|north|south)\s+\d+/.test(addressLower)) {
+        neighborhood = "Manhattan";
+      } else if (addressLower.includes('brooklyn')) {
+        neighborhood = "Brooklyn";
+      } else if (addressLower.includes('queens')) {
+        neighborhood = "Queens";
+      } else if (addressLower.includes('bronx')) {
+        neighborhood = "Bronx";
+      } else if (addressLower.includes('staten island')) {
+        neighborhood = "Staten Island";
+      }
+    }
+    
+    // Todo: remove mock functionality - simulate manual data analysis with contextual factors
     setTimeout(() => {
       const mockResult: AnalysisResult = {
         property: {
           address: data.address || "Manual Entry Property",
           unit: data.unit,
-          price: data.price || 1250000,
-          bedrooms: data.bedrooms || 2,
-          bathrooms: data.bathrooms || 2,
-          squareFeet: data.squareFeet || 1200,
-          propertyType: data.propertyType || "condo",
-          maintenance: data.maintenance || 1200,
-          taxes: data.taxes || 950,
-          neighborhood: "Greenwich Village",
-          daysOnMarket: 45,
+          price: data.price || 0,
+          bedrooms: data.bedrooms || 0,
+          bathrooms: data.bathrooms || 0,
+          squareFeet: data.squareFeet,
+          propertyType: data.propertyType || "unknown",
+          maintenance: data.maintenance,
+          taxes: data.taxes,
+          neighborhood: neighborhood,
+          daysOnMarket: 0, // No days on market data for manual entry
         },
         streetwiseScore: {
-          score: 78,
-          confidence: 85,
-          interpretation: "Good Value",
+          score: Math.max(50, Math.min(90, 60 + (providedFields * 4))), // Score based on data completeness
+          confidence: confidence,
+          interpretation: confidence > 80 ? "Good Analysis" : confidence > 60 ? "Limited Analysis" : "Preliminary Analysis",
           priceAnalysis: {
-            askingPrice: data.price || 1250000,
-            expectedPrice: 1180000,
-            priceGap: -5.6,
+            askingPrice: data.price || 0,
+            expectedPrice: data.price || 0,
+            priceGap: 0, // No market comparison for manual entry
           },
         },
         categories: [
           {
             name: "Fair Value & Market Context",
-            score: 82,
+            score: data.price ? 70 : 40,
             weight: 40,
-            description: "Asking price vs. comp-adjusted expected price",
-            topFactors: {
-              positive: ["Below market pricing", "Strong comparable sales"],
-              negative: ["High days on market"],
-            },
+            description: data.price ? "Based on provided price information" : "Limited without pricing data",
+            topFactors: contextualFactors.market,
           },
           {
             name: "Location & Neighborhood", 
-            score: 75,
+            score: data.address ? 65 : 35,
             weight: 20,
-            description: "Transit access, schools, noise, amenities",
-            topFactors: {
-              positive: ["Close to subway", "Top-rated schools"],
-              negative: ["Street noise", "Limited parking"],
-            },
+            description: data.address ? "Basic location analysis from address" : "No location analysis available",
+            topFactors: contextualFactors.location,
           },
           {
             name: "Building & Amenities",
-            score: 68,
+            score: (data.propertyType && data.maintenance) ? 70 : 45,
             weight: 15,
-            description: "Building quality, amenities, services",
-            topFactors: {
-              positive: ["Doorman", "Gym facility"],
-              negative: ["High maintenance fees", "Older building"],
-            },
+            description: "Based on provided building information",
+            topFactors: contextualFactors.building,
           },
           {
             name: "Unit & Layout",
-            score: 85,
+            score: (data.bedrooms && data.bathrooms) ? 75 : 50,
             weight: 20,
-            description: "Renovation, features, layout efficiency",
-            topFactors: {
-              positive: ["Recent renovation", "Great natural light"],
-              negative: ["Small bathroom"],
-            },
+            description: "Based on provided unit specifications",
+            topFactors: contextualFactors.unit,
           },
           {
             name: "Bonuses/Penalties",
-            score: 72,
+            score: 60,
             weight: 5,
-            description: "Special conditions and deal-breakers",
-            topFactors: {
-              positive: ["Tax abatement", "Pets allowed"],
-              negative: ["Flip tax"],
-            },
+            description: "Based on available property details",
+            topFactors: contextualFactors.bonus,
           },
         ],
         comparables: [
