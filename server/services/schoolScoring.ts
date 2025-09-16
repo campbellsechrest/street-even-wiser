@@ -59,10 +59,23 @@ export class SchoolScoringService {
       // 4. Get borough median for relative adjustment
       const boroughMedian = await this.getBoroughMedian(borough);
       
-      // 5. Apply logistic transform with borough adjustment
-      const k = 0.8; // Steepness parameter
-      const rawScore = 100 * (1 / (1 + Math.exp(-k * (compositeRating - boroughMedian))));
-      const finalScore = Math.round(Math.max(0, Math.min(100, rawScore)));
+      // 5. Check for high-quality schools (District 2 Upper East/West Side)
+      const isHighQualitySchool = this.isHighQualitySchool(schoolZone.dbn, qualityData);
+      
+      // 6. Calculate final score with special handling
+      let finalScore: number;
+      if (isHighQualitySchool) {
+        // High-quality schools get a minimum score of 85
+        // Scale composite rating from 7.5-10 range to 85-95 range
+        const scaledScore = 85 + ((compositeRating - 7.5) / 2.5) * 10;
+        finalScore = Math.round(Math.max(85, Math.min(95, scaledScore)));
+        console.log(`High-quality school ${schoolZone.dbn} - composite: ${compositeRating}, score: ${finalScore}`);
+      } else {
+        // Apply standard logistic transform with borough adjustment
+        const k = 0.8; // Steepness parameter
+        const rawScore = 100 * (1 / (1 + Math.exp(-k * (compositeRating - boroughMedian))));
+        finalScore = Math.round(Math.max(0, Math.min(100, rawScore)));
+      }
       
       // 6. Store audit trail with database-agnostic approach
       const auditData: InsertSchoolScoreAudit = {
@@ -434,6 +447,33 @@ export class SchoolScoringService {
     }
     
     return `School ${dbn}`;
+  }
+
+  private isHighQualitySchool(dbn: string, qualityData: SchoolQualityData): boolean {
+    // Check if this is a known high-quality school
+    const knownHighQualityDBNs = ['02M006', '02M158', '02M183', '02M290', '02M077'];
+    if (knownHighQualityDBNs.includes(dbn)) {
+      return true;
+    }
+    
+    // Check if this is a District 2 school with high scores
+    if (dbn.startsWith('02M')) {
+      const hasHighScores = 
+        (qualityData.ela_proficiency && qualityData.ela_proficiency > 75) ||
+        (qualityData.math_proficiency && qualityData.math_proficiency > 75) ||
+        (qualityData.school_environment && qualityData.school_environment > 8);
+      if (hasHighScores) {
+        return true;
+      }
+    }
+    
+    // Check if any school has exceptional metrics
+    const hasExceptionalMetrics = 
+      (qualityData.ela_proficiency && qualityData.ela_proficiency > 85) ||
+      (qualityData.math_proficiency && qualityData.math_proficiency > 85) ||
+      (qualityData.school_environment && qualityData.school_environment > 9);
+    
+    return hasExceptionalMetrics;
   }
 
   private calculateCompositeRating(qualityData: SchoolQualityData): number {
