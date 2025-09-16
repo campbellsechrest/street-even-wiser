@@ -45,29 +45,6 @@ export default function Header({ onSearch, onToggleDark, isDark }: HeaderProps) 
             </Badge>
           </div>
 
-          {/* Search Bar */}
-          <div className="flex-1 max-w-2xl mx-8">
-            <div className="relative">
-              <Input
-                data-testid="input-search"
-                type="text"
-                placeholder="Enter StreetEasy URL or property address..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="pl-10 pr-20"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Button 
-                data-testid="button-search"
-                onClick={handleSearch}
-                size="sm" 
-                className="absolute right-2 top-1/2 transform -translate-y-1/2"
-              >
-                Analyze
-              </Button>
-            </div>
-          </div>
 
           {/* Theme Toggle */}
           <div className="flex items-center">
