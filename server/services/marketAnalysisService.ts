@@ -210,19 +210,21 @@ export class MarketAnalysisService {
     const comparables: ComparablePropertyData[] = [];
     
     try {
-      // Use NYC Department of Finance Property Sales dataset with better geographic data
-      // This dataset contains real sales transactions with coordinates
-      const salesUrl = 'https://data.cityofnewyork.us/resource/4qxu-q2z9.json';
+      // Use NYC Citywide Rolling Calendar Sales dataset
+      // This dataset contains real sales transactions updated regularly
+      const salesUrl = 'https://data.cityofnewyork.us/resource/usep-8jbt.json';
       
       // Search within approximately 1 mile radius
       const latRange = 0.014; // ~1 mile in latitude degrees
       const lngRange = 0.018; // ~1 mile in longitude degrees (NYC area)
       
+      // NYC Rolling Calendar Sales uses different field names
+      const boroughCode = this.getBoroughCode(lat, lng);
       const queryParams = new URLSearchParams({
-        '$where': `latitude IS NOT NULL AND longitude IS NOT NULL AND sale_price > 100000 AND sale_date > '2023-01-01T00:00:00.000'`,
+        '$where': `sale_price > 100000`,
         '$limit': '200',
         '$order': 'sale_date DESC',
-        'borough': this.getBoroughCode(lat, lng)
+        'borough': boroughCode
       });
       
       const url = `${salesUrl}?${queryParams}`;
@@ -243,39 +245,38 @@ export class MarketAnalysisService {
       console.log(`[MarketAnalysis] Found ${salesData.length} recent sales from NYC Open Data`);
       
       for (const sale of salesData) {
-        // Skip invalid or incomplete sales data
-        if (!sale.sale_price || !sale.address || !sale.latitude || !sale.longitude) {
+        // Skip invalid or incomplete sales data  
+        // The NYC Rolling Calendar Sales dataset uses different field names
+        if (!sale.sale_price || !sale.address) {
           continue;
         }
 
-        const saleLat = parseFloat(sale.latitude);
-        const saleLng = parseFloat(sale.longitude);
-        
-        // Skip if coordinates are invalid
-        if (isNaN(saleLat) || isNaN(saleLng) || saleLat === 0 || saleLng === 0) {
+        // This dataset doesn't have lat/lng, so we'll use zip code proximity for now
+        // Skip if no zip code or address info
+        if (!sale.zip_code && !sale.address) {
           continue;
         }
-        
-        // Calculate real distance using coordinates
-        const distance = this.calculateDistance(lat, lng, saleLat, saleLng);
-        
-        // Skip if too far away (more than 1 mile)
-        if (distance > 1.0) continue;
         
         // Parse sale data more accurately
         const salePrice = parseFloat(sale.sale_price);
         if (salePrice < 100000) continue; // Skip suspiciously low prices
         
-        // Extract property details
+        // Extract property details using the correct field names for this dataset
         const bedrooms = this.extractBedrooms(sale);
-        const bathrooms = this.extractBathrooms(sale);
+        const bathrooms = this.extractBathrooms(sale); 
         const squareFeet = sale.gross_square_feet ? parseInt(sale.gross_square_feet) : undefined;
+        
+        // Use neighborhood as proxy for distance since we don't have coordinates
+        // Properties in same neighborhood are considered close
+        const isNearby = sale.neighborhood === subject.neighborhood || 
+                        sale.zip_code === subject.zipCode;
+        const estimatedDistance = isNearby ? 0.3 : 0.8; // Rough estimate
         
         const similarity = this.calculateSimilarity(subject, {
           bedrooms,
           bathrooms,
           squareFeet,
-          buildingType: sale.building_class_category
+          buildingType: sale.building_class_category || sale.building_class_final_roll
         });
         
         // Only include reasonably similar properties
@@ -288,7 +289,7 @@ export class MarketAnalysisService {
         }
         
         comparables.push({
-          id: `nyc_${sale.bbl || `${saleLat}_${saleLng}_${Date.parse(sale.sale_date)}`}`,
+          id: `nyc_${sale.bbl || `${sale.block}_${sale.lot}_${Date.parse(sale.sale_date)}`}`,
           address: sale.address,
           unit: sale.apartment_number || undefined,
           price: Math.round(salePrice),
@@ -296,10 +297,10 @@ export class MarketAnalysisService {
           bathrooms,
           squareFeet,
           soldDate: sale.sale_date,
-          distance: Math.round(distance * 1000) / 1000, // Round to 3 decimal places
+          distance: estimatedDistance, // Estimated based on neighborhood/zip
           similarity: Math.round(similarity),
           priceAdjustment: Math.round(priceAdjustment * 100) / 100,
-          building: sale.building_class_category
+          building: sale.building_class_category || sale.building_class_final_roll
         });
       }
       
