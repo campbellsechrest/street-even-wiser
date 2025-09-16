@@ -33,6 +33,31 @@ export const boroughSchoolMedians = pgTable("borough_school_medians", {
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
+// Property data table for storing extracted StreetEasy information
+export const properties = pgTable("properties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  streetEasyUrl: text("streeteasy_url").notNull().unique(),
+  address: text("address"),
+  neighborhood: text("neighborhood"),
+  borough: text("borough"),
+  price: text("price"),
+  priceValue: integer("price_value"),
+  bedrooms: integer("bedrooms"),
+  bathrooms: real("bathrooms"),
+  rooms: text("rooms"),
+  squareFootage: integer("square_footage"),
+  pricePerSquareFoot: integer("price_per_square_foot"),
+  listingType: text("listing_type"), // 'sale' or 'rental'
+  status: text("status"), // 'For Sale', 'Sold', 'For Rent', 'Rented'
+  buildingType: text("building_type"), // 'Condo', 'Co-op', 'Rental unit'
+  daysOnMarket: integer("days_on_market"),
+  listedDate: text("listed_date"),
+  soldDate: text("sold_date"),
+  extractedAt: timestamp("extracted_at").defaultNow(),
+  extractionSuccess: integer("extraction_success").notNull().default(1), // 1 for success, 0 for failed
+  extractionError: text("extraction_error"),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -45,6 +70,18 @@ export const insertSchoolScoreAuditSchema = createInsertSchema(schoolScoreAudits
 
 export const insertBoroughSchoolMedianSchema = createInsertSchema(boroughSchoolMedians).omit({
   lastUpdated: true,
+});
+
+export const insertPropertySchema = createInsertSchema(properties).omit({
+  id: true,
+  extractedAt: true,
+});
+
+export const propertyExtractionRequestSchema = z.object({
+  streetEasyUrl: z.string().url("Must be a valid URL").refine(
+    (url) => url.includes('streeteasy.com/building/'),
+    "Must be a StreetEasy property listing URL"
+  ),
 });
 
 // API request validation schemas
@@ -70,8 +107,11 @@ export type InsertSchoolScoreAudit = z.infer<typeof insertSchoolScoreAuditSchema
 export type SchoolScoreAudit = typeof schoolScoreAudits.$inferSelect;
 export type InsertBoroughSchoolMedian = z.infer<typeof insertBoroughSchoolMedianSchema>;
 export type BoroughSchoolMedian = typeof boroughSchoolMedians.$inferSelect;
+export type InsertProperty = z.infer<typeof insertPropertySchema>;
+export type Property = typeof properties.$inferSelect;
 
 // API request types
 export type SchoolScoreRequest = z.infer<typeof schoolScoreRequestSchema>;
 export type AnalyzePropertyRequest = z.infer<typeof analyzePropertyRequestSchema>;
+export type PropertyExtractionRequest = z.infer<typeof propertyExtractionRequestSchema>;
 export type Borough = z.infer<typeof boroughEnum>;
