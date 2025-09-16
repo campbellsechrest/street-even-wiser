@@ -127,7 +127,7 @@ export default function PropertyInputForm({
             <form onSubmit={urlForm.handleSubmit(onUrlSubmit)} className="space-y-4">
               <div>
                 <Label htmlFor="url" className="text-base font-medium">
-                  StreetEasy URL
+                  Enter a StreetEasy URL
                 </Label>
                 <div className="flex space-x-2 mt-2">
                   <Input
