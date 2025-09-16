@@ -14,6 +14,7 @@ interface NominatimResult {
   address?: {
     suburb?: string;
     neighbourhood?: string;
+    quarter?: string;
     city?: string;
     borough?: string;
     state?: string;
@@ -59,12 +60,18 @@ class GeocodingService {
       // Determine NYC borough from coordinates
       const borough = this.getBoroughFromCoordinates(lat, lng);
       
+      // Extract raw neighborhood from OSM - prefer quarter for accurate neighborhood data
+      const rawNeighborhood = result.address?.quarter || result.address?.neighbourhood || result.address?.suburb;
+      
+      // Refine neighborhood based on address and raw neighborhood data
+      const refinedNeighborhood = this.refineNeighborhood(rawNeighborhood, result.display_name);
+      
       return {
         lat,
         lng,
         borough,
         formattedAddress: result.display_name,
-        neighborhood: result.address?.neighbourhood || result.address?.suburb
+        neighborhood: refinedNeighborhood
       };
       
     } catch (error) {
@@ -96,6 +103,84 @@ class GeocodingService {
       console.error("StreetEasy URL parsing error:", error);
       return null;
     }
+  }
+
+  private refineNeighborhood(rawNeighborhood: string | undefined, fullAddress: string): string | undefined {
+    if (!rawNeighborhood) return undefined;
+    
+    const rawLower = rawNeighborhood.toLowerCase();
+    const addressLower = fullAddress.toLowerCase();
+    
+    // Refine Upper East Side neighborhoods based on street addresses
+    if (rawLower.includes('upper east side')) {
+      // Lenox Hill: East 60th to East 84th Streets (between Park Ave and East River)
+      if (addressLower.includes(' east ') || addressLower.includes(' e ')) {
+        const streetMatch = addressLower.match(/\b(?:east\s+|e\s+)(\d+)(?:st|nd|rd|th)/);
+        if (streetMatch) {
+          const streetNum = parseInt(streetMatch[1]);
+          if (streetNum >= 60 && streetNum <= 84) {
+            return "Lenox Hill";
+          }
+          if (streetNum >= 85 && streetNum <= 96) {
+            return "Yorkville";
+          }
+          if (streetNum >= 96) {
+            return "Carnegie Hill";
+          }
+        }
+      }
+      
+      // Check for specific avenue patterns
+      if (addressLower.includes('lexington') || addressLower.includes('park avenue') || addressLower.includes('madison')) {
+        const streetMatch = addressLower.match(/\b(\d+)\s+(?:east|e)\s+(\d+)(?:st|nd|rd|th)/);
+        if (streetMatch) {
+          const streetNum = parseInt(streetMatch[2]);
+          if (streetNum >= 60 && streetNum <= 84) {
+            return "Lenox Hill";
+          }
+        }
+      }
+      
+      // Default to Upper East Side if no specific refinement found
+      return "Upper East Side";
+    }
+    
+    // Refine Upper West Side neighborhoods
+    if (rawLower.includes('upper west side')) {
+      if (addressLower.includes(' west ') || addressLower.includes(' w ')) {
+        const streetMatch = addressLower.match(/\b(?:west\s+|w\s+)(\d+)(?:st|nd|rd|th)/);
+        if (streetMatch) {
+          const streetNum = parseInt(streetMatch[1]);
+          if (streetNum >= 59 && streetNum <= 72) {
+            return "Lincoln Square";
+          }
+          if (streetNum >= 73 && streetNum <= 89) {
+            return "Upper West Side";
+          }
+          if (streetNum >= 90) {
+            return "Manhattan Valley";
+          }
+        }
+      }
+      return "Upper West Side";
+    }
+    
+    // Refine Midtown neighborhoods
+    if (rawLower.includes('midtown')) {
+      if (addressLower.includes(' east ') || addressLower.includes(' e ')) {
+        return "Midtown East";
+      }
+      if (addressLower.includes(' west ') || addressLower.includes(' w ')) {
+        return "Midtown West";
+      }
+      if (addressLower.includes('5th avenue') || addressLower.includes('fifth avenue')) {
+        return "Midtown";
+      }
+      return rawNeighborhood; // Keep original if no specific refinement
+    }
+    
+    // Return original neighborhood if no refinement rules apply
+    return rawNeighborhood;
   }
 
   private getBoroughFromCoordinates(lat: number, lng: number): string {

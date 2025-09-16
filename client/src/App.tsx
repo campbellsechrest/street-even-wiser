@@ -376,7 +376,7 @@ function HomeContent() {
                   name: "Hedonic Model Prediction",
                   score: 0,
                   weight: 0,
-                  explanation: "AI model predicts $1,250,000 expected price based on property features: 2BR/2BA, 1,200 sqft, doorman building, Greenwich Village location, recent renovation",
+                  explanation: `AI model predicts $1,250,000 expected price based on property features: 2BR/2BA, 1,200 sqft, doorman building, ${finalNeighborhood} location, recent renovation`,
                   dataSource: "Hedonic pricing model trained on 50K+ NYC transactions",
                   value: "$1,250,000"
                 },
@@ -784,13 +784,56 @@ function HomeContent() {
     }
   };
 
-  const handleAddressSubmit = (data: { address: string }) => {
+  const handleAddressSubmit = async (data: { address: string }) => {
     console.log("Analyzing address:", data);
     setIsAnalyzing(true);
     
-    // Todo: remove mock functionality - simulate address search and analysis
-    setTimeout(() => {
-      // Generate contextual factors based on mock property data
+    try {
+      // Get geocoding and neighborhood information for the address
+      const geocodingService = GeocodingService.getInstance();
+      const schoolScoringClient = SchoolScoringClient.getInstance();
+      
+      let locationData = null;
+      let schoolScore = null;
+      
+      try {
+        locationData = await geocodingService.geocodeAddress(data.address);
+        console.log("Geocoding result for address:", locationData);
+      } catch (error) {
+        console.warn("Address geocoding failed:", error);
+      }
+      
+      // Try to get school scoring if we have location data
+      if (locationData && locationData.lat && locationData.lng) {
+        try {
+          schoolScore = await schoolScoringClient.calculateSchoolScore(
+            locationData.lat, 
+            locationData.lng, 
+            locationData.borough || "Manhattan"
+          );
+        } catch (schoolError) {
+          console.warn("School scoring failed, using fallback:", schoolError);
+        }
+      }
+      
+      // Use fallback school score if needed
+      if (!schoolScore) {
+        schoolScore = {
+          score: 65,
+          explanation: "School data unavailable for this location. Using neighborhood average.",
+          dataSource: "Fallback estimate",
+          value: "Estimated"
+        };
+      }
+
+      // Determine neighborhood from geocoding or fallback
+      const finalNeighborhood = locationData?.neighborhood || 
+                               (locationData?.borough && locationData.borough !== "Manhattan" ? locationData.borough : "Upper East Side");
+      const finalBorough = locationData?.borough || "Manhattan";
+      
+      console.log("Final neighborhood determined:", finalNeighborhood);
+      
+      // Generate contextual factors based on address analysis
       const mockPropertyData = {
         address: data.address,
         unit: undefined,
@@ -804,7 +847,8 @@ function HomeContent() {
         description: ""
       };
       const contextualFactors = generateContextualFactors(mockPropertyData);
-      const mockResult: AnalysisResult = {
+      
+      const analysisResult: AnalysisResult = {
         property: {
           address: data.address,
           unit: undefined,
@@ -815,7 +859,7 @@ function HomeContent() {
           propertyType: "condo",
           maintenance: 950,
           taxes: 800,
-          neighborhood: "Greenwich Village",
+          neighborhood: finalNeighborhood,
           daysOnMarket: undefined,
         },
         streetwiseScore: {
@@ -835,6 +879,25 @@ function HomeContent() {
             weight: 40,
             description: "Asking price vs. comp-adjusted expected price",
             topFactors: contextualFactors.market,
+            methodology: {
+              baseScore: 60,
+              calculation: "Address-based analysis with limited property data",
+              adjustments: [
+                {
+                  name: "Neighborhood Context",
+                  score: 0,
+                  weight: 0,
+                  explanation: `Based on ${finalNeighborhood} market conditions and address analysis`,
+                  dataSource: "Geocoding & neighborhood analysis",
+                  value: finalNeighborhood
+                }
+              ],
+              dataQuality: {
+                completeness: 60,
+                confidence: 75,
+                sources: ["Address Geocoding", "Neighborhood Data"]
+              }
+            }
           },
           {
             name: "Location & Neighborhood", 
@@ -842,6 +905,25 @@ function HomeContent() {
             weight: 20,
             description: "Transit access, schools, noise, amenities",
             topFactors: contextualFactors.location,
+            methodology: {
+              baseScore: 70,
+              calculation: "Location scoring based on address and neighborhood characteristics",
+              adjustments: [
+                {
+                  name: "School Quality",
+                  score: schoolScore.score,
+                  weight: 0.2,
+                  explanation: schoolScore.explanation,
+                  dataSource: schoolScore.dataSource,
+                  value: schoolScore.value
+                }
+              ],
+              dataQuality: {
+                completeness: 70,
+                confidence: 75,
+                sources: ["Geocoding", "School Data", "Neighborhood Analysis"]
+              }
+            }
           },
           {
             name: "Building & Amenities",
@@ -881,9 +963,18 @@ function HomeContent() {
         ],
       };
       
-      setAnalysisResult(mockResult);
+      setAnalysisResult(analysisResult);
       setIsAnalyzing(false);
-    }, 2500);
+      
+    } catch (error) {
+      console.error("Address analysis failed:", error);
+      toast({
+        title: "Analysis Failed",
+        description: "Unable to analyze this address. Please try again or use a StreetEasy URL.",
+        variant: "destructive",
+      });
+      setIsAnalyzing(false);
+    }
   };
 
   // Helper function to generate contextual top factors based on available data
