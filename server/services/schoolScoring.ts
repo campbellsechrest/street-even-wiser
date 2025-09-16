@@ -142,7 +142,9 @@ export class SchoolScoringService {
           
           if (zones.length > 0) {
             console.log(`School zone found:`, zones[0]);
-            return zones[0];
+            const normalizedZone = this.normalizeZoneData(zones[0]);
+            console.log(`Normalized zone data:`, normalizedZone);
+            return normalizedZone;
           }
           
         } catch (endpointError) {
@@ -233,6 +235,51 @@ export class SchoolScoringService {
       const schoolName = this.generateSchoolNameFromDBN(dbn);
       return { dbn, school_name: schoolName };
     }
+  }
+
+  private normalizeZoneData(rawZone: any): SchoolZoneResult {
+    // Map various field names from different NYC Open Data endpoints to consistent format
+    const dbnFieldNames = ['dbn', 'school_code', 'ats_system_code', 'school_dbn'];
+    const nameFieldNames = ['school_name', 'schoolname', 'school_nm', 'name', 'sch_name'];
+    
+    console.log(`Normalizing zone data with keys: ${Object.keys(rawZone).join(', ')}`);
+    
+    // Find DBN using possible field names
+    let dbn = '';
+    for (const fieldName of dbnFieldNames) {
+      if (rawZone[fieldName]) {
+        dbn = rawZone[fieldName].toString().trim();
+        console.log(`Found DBN '${dbn}' in field '${fieldName}'`);
+        break;
+      }
+    }
+    
+    // Find school name using possible field names
+    let school_name = '';
+    for (const fieldName of nameFieldNames) {
+      if (rawZone[fieldName]) {
+        school_name = rawZone[fieldName].toString().trim();
+        console.log(`Found school name '${school_name}' in field '${fieldName}'`);
+        break;
+      }
+    }
+    
+    // If no DBN found, return null
+    if (!dbn) {
+      console.warn(`No DBN found in zone data. Available fields: ${Object.keys(rawZone).join(', ')}`);
+      throw new Error('No valid DBN found in zone data');
+    }
+    
+    // If no school name found, generate one from DBN
+    if (!school_name) {
+      school_name = this.generateSchoolNameFromDBN(dbn);
+      console.log(`Generated school name '${school_name}' from DBN '${dbn}'`);
+    }
+    
+    return {
+      dbn,
+      school_name
+    };
   }
 
   private generateSchoolNameFromDBN(dbn: string): string {
