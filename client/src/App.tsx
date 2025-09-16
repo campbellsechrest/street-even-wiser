@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import PropertyInputForm from "@/components/PropertyInputForm";
 import StreetWiseScore from "@/components/StreetWiseScore";
@@ -14,6 +15,38 @@ import ComparableProperties from "@/components/ComparableProperties";
 import NotFound from "@/pages/not-found";
 import GeocodingService from "@/services/geocoding";
 import SchoolScoringClient from "@/services/schoolScoring";
+import { apiRequest } from "@/lib/queryClient";
+
+// Property data extracted from StreetEasy
+interface ExtractedPropertyData {
+  id?: string;
+  streetEasyUrl: string;
+  address?: string;
+  neighborhood?: string;
+  borough?: string;
+  price?: string;
+  priceValue?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  rooms?: string;
+  squareFootage?: number;
+  pricePerSquareFoot?: number;
+  listingType?: 'sale' | 'rental';
+  status?: string;
+  buildingType?: string;
+  daysOnMarket?: number;
+  listedDate?: string;
+  soldDate?: string;
+}
+
+interface PropertyExtractionResponse {
+  success: boolean;
+  data?: ExtractedPropertyData;
+  cached?: boolean;
+  message?: string;
+  error?: string;
+  botDetected?: boolean;
+}
 
 // Todo: remove mock functionality
 interface PropertyData {
@@ -88,20 +121,67 @@ function HomeContent() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { toast } = useToast();
+
+  // Property extraction mutation
+  const extractPropertyMutation = useMutation({
+    mutationFn: async (streetEasyUrl: string): Promise<PropertyExtractionResponse> => {
+      const response = await apiRequest("POST", "/api/properties/extract", {
+        streetEasyUrl
+      });
+      return await response.json();
+    },
+    onError: (error: Error) => {
+      console.error("Property extraction failed:", error);
+      toast({
+        title: "Extraction Failed",
+        description: error.message || "Failed to extract property data",
+        variant: "destructive",
+      });
+      setIsAnalyzing(false);
+    }
+  });
 
   const handleUrlSubmit = async (data: { url: string }) => {
     console.log("URL submitted:", data);
     setIsAnalyzing(true);
     
     try {
-      // Extract location from StreetEasy URL
+      // Extract property data from StreetEasy using real API
+      const extractionResult = await extractPropertyMutation.mutateAsync(data.url);
+
+      if (!extractionResult.success) {
+        // Handle extraction failures
+        const errorMessage = extractionResult.botDetected 
+          ? `Bot detection encountered. ${extractionResult.message || ""} Please try again or consider entering property details manually.`
+          : extractionResult.error || "Failed to extract property data";
+          
+        toast({
+          title: extractionResult.botDetected ? "Bot Detection" : "Extraction Failed",
+          description: errorMessage,
+          variant: extractionResult.botDetected ? "default" : "destructive",
+        });
+        
+        setIsAnalyzing(false);
+        return;
+      }
+
+      const extractedProperty = extractionResult.data!;
+      console.log("Property extracted successfully:", extractedProperty);
+
+      // Get geocoding for school scoring (fallback to geocoding service if no coordinates)
       const geocodingService = GeocodingService.getInstance();
       const schoolScoringClient = SchoolScoringClient.getInstance();
       
-      const locationData = await geocodingService.extractFromStreetEasyUrl(data.url);
+      let locationData = null;
+      
+      if (extractedProperty.address && extractedProperty.borough) {
+        // Try to get coordinates from the extracted address
+        locationData = await geocodingService.extractFromStreetEasyUrl(data.url);
+      }
       
       if (!locationData) {
-        throw new Error("Could not extract location from URL");
+        throw new Error("Could not determine property location for school scoring");
       }
 
       // Get real school scoring data
@@ -111,20 +191,20 @@ function HomeContent() {
         locationData.borough
       );
 
-      // Create analysis result with real school data integrated
-      const mockResult: AnalysisResult = {
+      // Create analysis result with real extracted property data and school scoring
+      const analysisResult: AnalysisResult = {
         property: {
-          address: locationData.formattedAddress || "123 West 4th Street",
-          unit: "5B",
-          price: 1185000,
-          bedrooms: 2,
-          bathrooms: 2,
-          squareFeet: 1200,
-          propertyType: "condo",
-          maintenance: 1200,
-          taxes: 950,
-          neighborhood: "Greenwich Village",
-          daysOnMarket: 45,
+          address: extractedProperty.address || locationData.formattedAddress || "Property Address",
+          unit: undefined, // TODO: Extract unit from address if available
+          price: extractedProperty.priceValue || 0,
+          bedrooms: extractedProperty.bedrooms || 1,
+          bathrooms: extractedProperty.bathrooms || 1,
+          squareFeet: extractedProperty.squareFootage,
+          propertyType: extractedProperty.buildingType?.toLowerCase() || "condo",
+          maintenance: undefined, // TODO: Add maintenance extraction
+          taxes: undefined, // TODO: Add tax estimation
+          neighborhood: extractedProperty.neighborhood || extractedProperty.borough || locationData.neighborhood || "NYC",
+          daysOnMarket: extractedProperty.daysOnMarket || 0,
         },
         streetwiseScore: {
           score: 78,
@@ -469,7 +549,7 @@ function HomeContent() {
         ],
       };
       
-      setAnalysisResult(mockResult);
+      setAnalysisResult(analysisResult);
       setIsAnalyzing(false);
     } catch (error) {
       console.error("Property analysis failed:", error);
