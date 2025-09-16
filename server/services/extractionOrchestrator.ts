@@ -38,16 +38,17 @@ export class ExtractionOrchestrator {
     const attempts: string[] = [];
     const startTime = Date.now();
 
-    console.log(`Orchestrator: Starting extraction for ${url} (cache=${fromCache})`);
+    console.log(`🚀 Orchestrator: Starting extraction for ${url} (cache=${fromCache})`);
+    console.log(`🚀 Orchestrator: API key available: ${!!process.env.FIRECRAWL_API_KEY}`);
 
     // Method 1: Try primary HTTP-based extraction
     attempts.push("http");
     try {
-      console.log("Orchestrator: Attempting primary HTTP extraction");
+      console.log("🔧 Orchestrator: Attempting primary HTTP extraction");
       const httpResult = await StreetEasyExtractor.extractPropertyData(url);
       
       if (httpResult.success && httpResult.data) {
-        console.log(`Orchestrator: Primary extraction succeeded in ${Date.now() - startTime}ms`);
+        console.log(`✅ Orchestrator: Primary extraction succeeded in ${Date.now() - startTime}ms`);
         return {
           success: true,
           data: {
@@ -62,7 +63,7 @@ export class ExtractionOrchestrator {
 
       // Check if it's a bot detection issue
       if (httpResult.botDetected) {
-        console.log("Orchestrator: Primary extraction blocked, trying Firecrawl fallback");
+        console.log("🚫 Orchestrator: Primary extraction blocked, trying Firecrawl fallback");
       } else {
         console.log(`Orchestrator: Primary extraction failed: ${httpResult.error}`);
       }
@@ -74,11 +75,11 @@ export class ExtractionOrchestrator {
     // Method 2: Try Firecrawl fallback
     attempts.push("firecrawl");
     try {
-      console.log("Orchestrator: Attempting Firecrawl fallback extraction");
+      console.log("🔥 Orchestrator: Attempting Firecrawl fallback extraction");
       const firecrawlResult = await this.firecrawlExtractor.extractPropertyData(url);
       
       if (firecrawlResult.success && firecrawlResult.data) {
-        console.log(`Orchestrator: Firecrawl extraction succeeded in ${Date.now() - startTime}ms`);
+        console.log(`✅ Orchestrator: Firecrawl extraction succeeded in ${Date.now() - startTime}ms`);
         return {
           success: true,
           data: firecrawlResult.data,
