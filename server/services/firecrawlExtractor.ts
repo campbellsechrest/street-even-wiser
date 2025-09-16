@@ -1,15 +1,18 @@
 import FirecrawlApp from "@mendable/firecrawl-js";
 import type { ExtractedPropertyData } from "@shared/schema";
 
-interface FirecrawlResponse {
+interface FirecrawlScrapeResponse {
   success: boolean;
-  data?: {
-    markdown?: string;
-    html?: string;
-    metadata?: {
-      title?: string;
-      description?: string;
-    };
+  markdown?: string;
+  html?: string;
+  screenshot?: string;
+  metadata?: {
+    title?: string;
+    description?: string;
+    statusCode?: number;
+    sourceURL?: string;
+    ogTitle?: string;
+    ogDescription?: string;
   };
   error?: string;
 }
@@ -44,17 +47,21 @@ export class FirecrawlExtractor {
   }> {
     try {
       console.log(`Firecrawl: Attempting extraction for ${url}`);
+      console.log(`Firecrawl: API key configured: ${!!process.env.FIRECRAWL_API_KEY}`);
 
       // Use Firecrawl to scrape the page
+      console.log("Firecrawl: About to call scrapeUrl...");
       const response = await this.firecrawl.scrapeUrl(url, {
         formats: ["markdown", "html"],
-        includeTags: ["title", "meta"],
-        excludeTags: ["script", "style", "nav", "footer"],
-        waitFor: 2000, // Wait 2s for dynamic content
-      }) as FirecrawlResponse;
+        onlyMainContent: true,
+        timeout: 30000, // 30 second timeout
+      }) as FirecrawlScrapeResponse;
 
-      if (!response.success || !response.data) {
-        console.log("Firecrawl: Failed to scrape page", response.error);
+      console.log("Firecrawl: scrapeUrl call completed");
+      console.log("Firecrawl: Raw response:", JSON.stringify(response, null, 2));
+
+      if (!response.success || !response.markdown) {
+        console.log("Firecrawl: Failed to scrape page. Success:", response.success, "Markdown:", !!response.markdown, "Error:", response.error);
         return {
           success: false,
           error: response.error || "Failed to scrape page",
@@ -63,7 +70,7 @@ export class FirecrawlExtractor {
       }
 
       // Extract property data from the scraped content
-      const extractedData = this.parsePropertyData(response.data.markdown || "", url);
+      const extractedData = this.parsePropertyData(response.markdown, url);
       
       if (!extractedData) {
         return {
