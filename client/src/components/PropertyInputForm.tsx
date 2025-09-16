@@ -120,7 +120,7 @@ export default function PropertyInputForm({
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6">
         {/* Primary: URL Input */}
         {inputMethod === "url" && !showManualCorrections && (
           <div className="space-y-4">
