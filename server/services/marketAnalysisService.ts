@@ -267,10 +267,12 @@ export class MarketAnalysisService {
         const squareFeet = sale.gross_square_feet ? parseInt(sale.gross_square_feet) : undefined;
         
         // Use neighborhood as proxy for distance since we don't have coordinates
-        // Properties in same neighborhood are considered close
-        const isNearby = sale.neighborhood === subject.neighborhood || 
-                        sale.zip_code === subject.zipCode;
-        const estimatedDistance = isNearby ? 0.3 : 0.8; // Rough estimate
+        // Properties in same neighborhood are considered close (Upper East Side specific)
+        const isUpperEastSide = sale.neighborhood && 
+                               (sale.neighborhood.toLowerCase().includes('upper east') || 
+                                sale.neighborhood.toLowerCase().includes('lenox hill') ||
+                                sale.neighborhood.toLowerCase().includes('carnegie hill'));
+        const estimatedDistance = isUpperEastSide ? 0.3 : 0.8; // Rough estimate
         
         const similarity = this.calculateSimilarity(subject, {
           bedrooms,
