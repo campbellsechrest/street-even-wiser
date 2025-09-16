@@ -21,7 +21,7 @@ interface PropertySummaryProps {
     bedrooms: number;
     bathrooms: number;
     squareFeet?: number;
-    daysOnMarket: number;
+    daysOnMarket?: number;
     propertyType: string;
     neighborhood: string;
     yearBuilt?: number;
@@ -54,7 +54,8 @@ export default function PropertySummary({
     return `$${Math.round(price / sqft)}/sq ft`;
   };
 
-  const getStatusBadge = (dom: number) => {
+  const getStatusBadge = (dom?: number) => {
+    if (!dom) return { text: "New", variant: "outline" as const };
     if (dom < 30) return { text: "Fresh", variant: "default" as const };
     if (dom < 90) return { text: "Active", variant: "secondary" as const };
     return { text: "Stale", variant: "destructive" as const };
@@ -144,7 +145,9 @@ export default function PropertySummary({
           <div className="text-center space-y-1">
             <div className="flex items-center justify-center">
               <Calendar className="w-4 h-4 text-muted-foreground mr-1" />
-              <span className="font-semibold" data-testid="text-days-on-market">{property.daysOnMarket}</span>
+              <span className="font-semibold" data-testid="text-days-on-market">
+                {property.daysOnMarket ?? "N/A"}
+              </span>
             </div>
             <p className="text-xs text-muted-foreground">Days on Market</p>
           </div>

@@ -139,7 +139,7 @@ interface PropertyData {
   maintenance?: number;
   taxes?: number;
   neighborhood: string;
-  daysOnMarket: number;
+  daysOnMarket?: number;
 }
 
 interface AnalysisResult {
@@ -349,7 +349,7 @@ function HomeContent() {
           maintenance: undefined, // TODO: Add maintenance extraction
           taxes: undefined, // TODO: Add tax estimation
           neighborhood: finalNeighborhood,
-          daysOnMarket: extractedProperty.daysOnMarket || 0,
+          daysOnMarket: extractedProperty.daysOnMarket,
         },
         streetwiseScore: {
           score: 78,
@@ -713,7 +713,7 @@ function HomeContent() {
             maintenance: undefined,
             taxes: undefined,
             neighborhood: extractedProperty?.neighborhood || getBoroughFromNeighborhood(extractedProperty?.neighborhood || "") || "NYC",
-            daysOnMarket: extractedProperty?.daysOnMarket || 0,
+            daysOnMarket: extractedProperty?.daysOnMarket,
           },
           streetwiseScore: {
             score: 70,
@@ -816,7 +816,7 @@ function HomeContent() {
           maintenance: 950,
           taxes: 800,
           neighborhood: "Greenwich Village",
-          daysOnMarket: 30,
+          daysOnMarket: undefined,
         },
         streetwiseScore: {
           score: 65,
@@ -1084,7 +1084,7 @@ function HomeContent() {
           maintenance: data.maintenance,
           taxes: data.taxes,
           neighborhood: neighborhood,
-          daysOnMarket: 0, // No days on market data for manual entry
+          daysOnMarket: undefined, // No days on market data for manual entry
         },
         streetwiseScore: {
           score: Math.max(50, Math.min(90, 60 + (providedFields * 4))), // Score based on data completeness
